@@ -16,18 +16,21 @@ from CustomLayers import MaskLayer
 
 
 import os
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+matplotlib.use('Agg')
 
 
 class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
                  regularizer_coef=1e-6 ,on_cloud=1):
         self.encoded_dim = encoded_dim
-        self.regularizer_coef = regularizer_coef
         self.optimizer = Adam(0.0001)
         self.optimizer_discriminator = Adam(0.00001)
         self.img_shape = img_shape
         self.Number_of_pilot=Number_of_pilot
+        self.regularizer_coef=regularizer_coef
         self.on_cloud=on_cloud
         self._initAndCompileFullModel(img_shape, encoded_dim)
 
@@ -70,9 +73,6 @@ class SparseEstimatorNetwork():
         decoder.summary()
         return decoder
 
-
-
-
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
         self.encoder = self._genEncoderModel(img_shape, encoded_dim)
         self.decoder = self._getDecoderModel(encoded_dim, img_shape)
@@ -84,7 +84,7 @@ class SparseEstimatorNetwork():
 
 
     def train(self, x_in, x_out, batch_size=32, epochs=5, log_path='.'):
-        if (os.path.isfile(log_path+'./weights.hdf5')):
+        if (os.path.isfile(log_path+'/weights.hdf5')):
             self.autoencoder.load_weights('weights.hdf5')
         earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
         self.autoencoder.fit(x_in, x_out, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
