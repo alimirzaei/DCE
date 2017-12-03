@@ -71,26 +71,6 @@ class SparseEstimatorNetwork():
         return decoder
 
 
-    def _getDescriminator(self, img_shape):
-        """ Build Descriminator Model Based on Paper Configuration
-        Args:
-            encoded_dim (int) : number of latent variables
-        Return:
-            A sequential keras model
-        """
-        initializer = RandomNormal(mean=0.0, stddev=0.01, seed=None)
-        discriminator = Sequential()
-        discriminator.add(Flatten(input_shape=img_shape))
-        discriminator.add(Dense(1000, activation='relu',
-                                kernel_initializer=initializer,
-                                bias_initializer=initializer))
-        discriminator.add(Dense(1000, activation='relu', kernel_initializer=initializer,
-                bias_initializer=initializer))
-        discriminator.add(Dense(1, activation='sigmoid', kernel_initializer=initializer,
-                bias_initializer=initializer))
-        discriminator.summary()
-        return discriminator
-
 
 
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
