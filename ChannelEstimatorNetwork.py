@@ -24,13 +24,15 @@ matplotlib.use('Agg')
 
 class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
-                 regularizer_coef=1e-6 ,on_cloud=1):
+                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.'):
         self.encoded_dim = encoded_dim
         self.optimizer = Adam(0.0001)
         self.optimizer_discriminator = Adam(0.00001)
         self.img_shape = img_shape
         self.Number_of_pilot=Number_of_pilot
         self.regularizer_coef=regularizer_coef
+        self.test_mode=test_mode        
+        self.log_path=log_path        
         self.on_cloud=on_cloud
         self._initAndCompileFullModel(img_shape, encoded_dim)
 
@@ -81,15 +83,29 @@ class SparseEstimatorNetwork():
         gen_img = self.decoder(encoded_repr)
         self.autoencoder = Model(img, gen_img)
         self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
+        if self.test_mode==1:
+            if self.on_cloud==0:
+                Weigth_data=self.log_path+"/"+"weights.hdf5"
+                if (os.path.isfile(Weigth_data)):
+                    self.autoencoder.load_weights(Weigth_data)
+                else:
+                    print("train the model first!!!")
+            else:
+                #might be changed if the weights location changes
+                Weigth_data=self.log_path+"/"+"weights.hdf5"
+                if (os.path.isfile(Weigth_data)):
+                    self.autoencoder.load_weights(Weigth_data)
+                else:
+                    print("train the model first!!!")
 
 
-    def train(self, x_in, x_out, batch_size=32, epochs=5, log_path='.'):
-        if (os.path.isfile(log_path+'/weights.hdf5')):
+    def train(self, x_in, x_out, batch_size=32, epochs=5):
+        if (os.path.isfile(self.log_path+'/weights.hdf5')):
             self.autoencoder.load_weights('weights.hdf5')
         earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
         self.autoencoder.fit(x_in, x_out, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
                               callbacks=[earlyStopping,
-                                        keras.callbacks.ModelCheckpoint(log_path+"/"+'weights.hdf5', 
+                                        keras.callbacks.ModelCheckpoint(self.log_path+"/"+'weights.hdf5', 
                                            verbose=0, 
                                            monitor='val_loss',
                                            #save_best_only=False, 
@@ -97,7 +113,7 @@ class SparseEstimatorNetwork():
                                            save_weights_only=False, 
                                            mode='auto', 
                                            period=1)
-                                        #,keras.callbacks.TensorBoard(log_dir=log_path, 
+                                        #,keras.callbacks.TensorBoard(log_dir=self.log_path, 
                                         #            histogram_freq=0, 
                                         #            batch_size=batch_size, write_graph=True,
                                         #            write_grads=False,
@@ -106,6 +122,22 @@ class SparseEstimatorNetwork():
                                         #            embeddings_layer_names=None,
                                         #            embeddings_metadata=None)
                                         ])
+
+    def FindEstiamte(self, x_test, fileName="test.png"):
+        fig = plt.figure(figsize=[20, 20/3])
+        x_in = x_test
+        y = self.autoencoder.predict(x_in.reshape(1,x_in.shape[0],x_in.shape[1]))
+
+        fig = plt.figure(figsize=[20, 20/2])
+        i=0
+        ax = fig.add_subplot(1, 2, i*2+1)
+        ax.set_axis_off()
+        ax.imshow(x_in)
+        ax = fig.add_subplot(1, 2, i*2+2)
+        ax.set_axis_off()
+        ax.imshow(y[0]) #Layer cut
+        fig.savefig(fileName)
+        return y
 
     def generateAndPlot(self, x_test, n = 10, fileName="generated.png"):
         Sampled_image_model = K.function([self.encoder.layers[0].input],

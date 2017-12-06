@@ -1,8 +1,11 @@
 
 
 floyd run --gpu --env tensorflow-1.3 --data fakhfour/datasets/chimage_3/1:/ch_imag "python main.py --dataset /ch_imag "
+floyd run --gpu --env tensorflow-1.3 --data fakhfour/datasets/chimag_4/1:/ch_imag "python main.py --dataset /ch_imag "
 
 floyd logs -u ID
 
 floyd output -u ID
 ---------------------------
+
+Git push origin master

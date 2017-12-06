@@ -27,6 +27,8 @@ FLAGS = flags.FLAGS
 # In[7]:
 #def main(_):
 on_cloud=1
+normalize=1
+normalize_type=1
 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
@@ -35,7 +37,7 @@ if (on_cloud == 1):
 else:
     log_path = os.path.join("./output/",FLAGS.logdir)
     #data_path = os.path.join(FLAGS.dataset)
-    data_path = os.path.join("/Local_data/chimage_data_2/","")
+    data_path = os.path.join("/Local_data/chimage_data_3/","")
 
 
 Data_file=data_path+"/Ch_real_VehA_14.mat"
@@ -45,7 +47,10 @@ channels = scipy.io.loadmat(Data_file)['channels']
 reals = np.real(channels)
 imags = np.imag(channels)
 all_channel_images = np.vstack([reals, imags])
-all_channel_images = (all_channel_images+5)/10.0
+
+if normalize==1:
+    if normalize_type==1:
+        all_channel_images = (all_channel_images+5)/10.0
 
 #print(np.amax(all_channel_images))
 
@@ -55,19 +60,25 @@ all_channel_images = (all_channel_images+5)/10.0
 
 X_train , X_test = train_test_split(all_channel_images, test_size=.1, random_state=4000)
 
-regularizer_coef=0.0000001/1024   
+regularizer_coef=0.00000006/1024   #16 (10)
+#regularizer_coef=0.0000001/1024   #7 (36) #14 (8)
+regularizer_coef=0.0000002/1024   #9 (36) #12 (16) 
 
-
-Number_of_pilot=36
+encoded_dim=200
+Number_of_pilot=16
 epochs=50
 
-network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=600,
-                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef ,on_cloud=on_cloud)
+network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
+                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef ,on_cloud=on_cloud,test_mode =0 , log_path=log_path)
 
-network.train(X_train,X_train, epochs=epochs, log_path=log_path)
+network.train(X_train,X_train, epochs=epochs)
+
+
+Test_network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
+                                      Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef ,on_cloud=on_cloud,test_mode =1 , log_path=log_path)
 
 Image_filename=log_path+"/generated.png"
-Test_Error,Y_all,X_all=network.generateAndPlot(X_test,50,fileName=Image_filename)
+Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,50,fileName=Image_filename)
 print(np.sqrt(Test_Error))
 
 print(np.mean(np.sqrt(Test_Error)))
