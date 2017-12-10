@@ -5,7 +5,7 @@ import copy
 import keras
 
 from keras.models import Sequential, Model
-from keras.layers import Dense, Input, Flatten, Reshape
+from keras.layers import Dense, Input, Flatten, Reshape, Lambda, concatenate
 from keras import regularizers
 from keras.initializers import RandomNormal
 
@@ -13,14 +13,18 @@ from keras.optimizers import Adam
 import numpy as np
 from keras import backend as K
 from CustomLayers import MaskLayer
-
-
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import tensorflow as tf
 import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 
+def AddNoise(input_args):
+    x = input_args[0]
+    noise = input_args[1]
+    return x+noise
 
 class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
@@ -35,7 +39,10 @@ class SparseEstimatorNetwork():
         self.log_path=log_path        
         self.on_cloud=on_cloud
         self._initAndCompileFullModel(img_shape, encoded_dim)
-
+        #self.scaler = StandardScaler(with_mean=True, with_std=True)
+        self.scaler = MinMaxScaler((0,1))
+        
+        
 
     def _genEncoderModel(self, img_shape, encoded_dim):
         """ Build Encoder Model Based on Paper Configuration
@@ -67,7 +74,7 @@ class SparseEstimatorNetwork():
             A sequential keras model
         """
         decoder = Sequential()
-        decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim))
+        decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
         decoder.add(Dense(1000, activation='relu'))
         #decoder.add(Dense(1000, activation='relu'))
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
@@ -79,9 +86,14 @@ class SparseEstimatorNetwork():
         self.encoder = self._genEncoderModel(img_shape, encoded_dim)
         self.decoder = self._getDecoderModel(encoded_dim, img_shape)
         img = Input(shape=img_shape)
-        encoded_repr = self.encoder(img)
-        gen_img = self.decoder(encoded_repr)
-        self.autoencoder = Model(img, gen_img)
+        noise = Input(shape=img_shape)
+        variance = Input(shape=(1,))
+        noisy_image = Lambda(AddNoise)([img, noise])
+        #concated = Concatenate([Flatten(input_shape=img_shape)(noisy_image), variance])
+        encoded_repr = self.encoder(noisy_image)
+        concated = concatenate([encoded_repr, variance])
+        gen_img = self.decoder(concated)
+        self.autoencoder = Model([img, noise, variance], gen_img)
         self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
         if self.test_mode==1:
             if self.on_cloud==0:
@@ -99,11 +111,22 @@ class SparseEstimatorNetwork():
                     print("train the model first!!!")
 
 
-    def train(self, x_in, x_out, batch_size=32, epochs=5):
+    def train(self, x_in, batch_size=32, epochs=5, a=.1, b=.2):
+        x_scaled = self.scaler.fit_transform(x_in.reshape(len(x_in),-1))
+        x_scaled_reshped =  x_scaled.reshape(x_in.shape)
         if (os.path.isfile(self.log_path+'/weights.hdf5')):
             self.autoencoder.load_weights('weights.hdf5')
         earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
-        self.autoencoder.fit(x_in, x_out, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
+        noises = []
+        variances = []
+        for i in range(len(x_in)):
+            var = np.random.uniform(a, b)
+            noise = np.sqrt(var)*np.random.randn(*x_in[0].shape)
+            variances.append(var)
+            noises.append(noise)
+        noises = np.array(noises)
+        variances = np.array(variances)
+        self.autoencoder.fit([x_scaled_reshped, noises, variances], x_scaled_reshped, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
                               callbacks=[earlyStopping,
                                         keras.callbacks.ModelCheckpoint(self.log_path+"/"+'weights.hdf5', 
                                            verbose=0, 
@@ -122,11 +145,18 @@ class SparseEstimatorNetwork():
                                         #            embeddings_layer_names=None,
                                         #            embeddings_metadata=None)
                                         ])
+    def test(self, x_in):
+        x_scaled = self.scaler.transform(x_in.reshape(len(x_in),-1))
+        x_scaled_reshped =  x_scaled.reshape(x_in.shape)
+        y = self.autoencoder.predict([x_scaled_reshped.reshape(*x_in.shape),np.zeros(x_in.shape), np.zeros((len(x_in), 1))])
+        y_true = self.scaler.inverse_transform(y.reshape(len(y),-1))
+        return y_true.reshape(*x_in.shape)
+        
 
     def FindEstiamte(self, x_test, fileName="test.png"):
         fig = plt.figure(figsize=[20, 20/3])
         x_in = x_test
-        y = self.autoencoder.predict(x_in.reshape(1,x_in.shape[0],x_in.shape[1]))
+        y = self.test(x_in.reshape(1,x_in.shape[0],x_in.shape[1]))
 
         fig = plt.figure(figsize=[20, 20/2])
         i=0
@@ -150,7 +180,7 @@ class SparseEstimatorNetwork():
         for i in range(n):
             x_in = x_test[np.random.randint(len(x_test))]
             x=copy.copy(x_in)
-            y = self.autoencoder.predict(x.reshape(1,x_test.shape[1],x_test.shape[2]))
+            y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]))
             ax = fig.add_subplot(n, 3, i*3+1)
             ax.set_axis_off()
             ax.imshow(x)
@@ -176,7 +206,7 @@ if __name__=='__main__':
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = x_train.astype(np.float32) / 255.
     x_test = x_test.astype(np.float32) / 255.
-    network = SparseEstimatorNetwork()
-    network.train(x_train, x_train)
-    
-    
+    network = SparseEstimatorNetwork(encoded_dim=10)
+    network.train(x_train, epochs=1, a=.1, b=1)
+    #y = network.test(x_test[0:10])
+    network.generateAndPlot(x_test)

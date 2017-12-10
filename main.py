@@ -26,7 +26,7 @@ FLAGS = flags.FLAGS
 
 # In[7]:
 #def main(_):
-on_cloud=1
+on_cloud=0
 normalize=1
 normalize_type=1
 
