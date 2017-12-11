@@ -26,9 +26,9 @@ FLAGS = flags.FLAGS
 
 # In[7]:
 #def main(_):
-on_cloud=0
-normalize=1
-normalize_type=1
+on_cloud=1
+normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler 
+normalize_type=0
 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
@@ -48,9 +48,8 @@ reals = np.real(channels)
 imags = np.imag(channels)
 all_channel_images = np.vstack([reals, imags])
 
-if normalize==1:
-    if normalize_type==1:
-        all_channel_images = (all_channel_images+5)/10.0
+if normalize_mode==1:
+    all_channel_images = (all_channel_images+5)/10.0
 
 #print(np.amax(all_channel_images))
 
@@ -69,13 +68,17 @@ Number_of_pilot=16
 epochs=50
 
 network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
-                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef ,on_cloud=on_cloud,test_mode =0 , log_path=log_path)
+                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
+                                 on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
+                                 Noise_var_L=.1, Noise_var_H=1)
 
 network.train(X_train, epochs=epochs)
 
 
 Test_network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
-                                      Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef ,on_cloud=on_cloud,test_mode =1 , log_path=log_path)
+                                      Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
+                                      on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
+                                      Noise_var_L=.1, Noise_var_H=1)
 
 Image_filename=log_path+"/generated.png"
 Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,50,fileName=Image_filename)
