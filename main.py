@@ -40,7 +40,7 @@ else:
     data_path = os.path.join("/Local_data/chimage_data_3/","")
 
 
-Data_file=data_path+"/Ch_real_VehA_14.mat"
+Data_file="Ch_real_VehA_14.mat"
 
 
 channels = scipy.io.loadmat(Data_file)['channels']
@@ -71,7 +71,7 @@ epochs=50
 network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
                                  Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef ,on_cloud=on_cloud,test_mode =0 , log_path=log_path)
 
-network.train(X_train,X_train, epochs=epochs)
+network.train(X_train, epochs=epochs)
 
 
 Test_network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,

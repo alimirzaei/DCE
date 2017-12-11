@@ -145,10 +145,10 @@ class SparseEstimatorNetwork():
                                         #            embeddings_layer_names=None,
                                         #            embeddings_metadata=None)
                                         ])
-    def test(self, x_in):
+    def test(self, x_in, var):
         x_scaled = self.scaler.transform(x_in.reshape(len(x_in),-1))
         x_scaled_reshped =  x_scaled.reshape(x_in.shape)
-        y = self.autoencoder.predict([x_scaled_reshped.reshape(*x_in.shape),np.zeros(x_in.shape), np.zeros((len(x_in), 1))])
+        y = self.autoencoder.predict([x_scaled_reshped.reshape(*x_in.shape),np.zeros(x_in.shape), var*np.ones((len(x_in), 1))])
         y_true = self.scaler.inverse_transform(y.reshape(len(y),-1))
         return y_true.reshape(*x_in.shape)
         
