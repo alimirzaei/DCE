@@ -14,6 +14,7 @@ import numpy as np
 from keras import backend as K
 from CustomLayers import MaskLayer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.externals import joblib
 import tensorflow as tf
 import os
 import matplotlib
@@ -28,7 +29,7 @@ def AddNoise(input_args):
 
 class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
-                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.'):
+                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1):
         self.encoded_dim = encoded_dim
         self.optimizer = Adam(0.0001)
         self.optimizer_discriminator = Adam(0.00001)
@@ -38,9 +39,13 @@ class SparseEstimatorNetwork():
         self.test_mode=test_mode        
         self.log_path=log_path        
         self.on_cloud=on_cloud
+        self.normalize_mode=normalize_mode
+        self.Noise_var_L=Noise_var_L
+        self.Noise_var_H=Noise_var_H
+        if self.normalize_mode==2:
+            self.scaler = MinMaxScaler((0,1))
         self._initAndCompileFullModel(img_shape, encoded_dim)
         #self.scaler = StandardScaler(with_mean=True, with_std=True)
-        self.scaler = MinMaxScaler((0,1))
         
         
 
@@ -102,6 +107,12 @@ class SparseEstimatorNetwork():
                     self.autoencoder.load_weights(Weigth_data)
                 else:
                     print("train the model first!!!")
+                if self.normalize_mode==2:
+                    scaler_filename = self.log_path+"/scaler.save"
+                    if (os.path.isfile(scaler_filename)):
+                        scaler = joblib.load(scaler_filename)
+                    else:
+                        print("train the model first!!!")
             else:
                 #might be changed if the weights location changes
                 Weigth_data=self.log_path+"/"+"weights.hdf5"
@@ -109,23 +120,42 @@ class SparseEstimatorNetwork():
                     self.autoencoder.load_weights(Weigth_data)
                 else:
                     print("train the model first!!!")
+                if self.normalize_mode==2:
+                    scaler_filename = self.log_path+"/scaler.save"
+                    if (os.path.isfile(scaler_filename)):
+                        self.scaler = joblib.load(scaler_filename)
+                    else:
+                        print("train the model first!!!")
 
 
-    def train(self, x_in, batch_size=32, epochs=5, a=.1, b=.2):
-        x_scaled = self.scaler.fit_transform(x_in.reshape(len(x_in),-1))
+    def train(self, x_in, batch_size=32, epochs=5):
+
+        Num_noise_per_image=5
+
+        x_in= np.tile(x_in, (Num_noise_per_image,1,1))
+
+        if self.normalize_mode==2:
+            x_scaled = self.scaler.fit_transform(x_in.reshape(len(x_in),-1))
+        else:
+            x_scaled=x_in
+
         x_scaled_reshped =  x_scaled.reshape(x_in.shape)
         if (os.path.isfile(self.log_path+'/weights.hdf5')):
             self.autoencoder.load_weights('weights.hdf5')
-        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
+        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
+
         noises = []
         variances = []
+
         for i in range(len(x_in)):
-            var = np.random.uniform(a, b)
-            noise = np.sqrt(var)*np.random.randn(*x_in[0].shape)
+            var = np.random.uniform(self.Noise_var_L, self.Noise_var_H)
+            noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
             variances.append(var)
             noises.append(noise)
+
         noises = np.array(noises)
         variances = np.array(variances)
+
         self.autoencoder.fit([x_scaled_reshped, noises, variances], x_scaled_reshped, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
                               callbacks=[earlyStopping,
                                         keras.callbacks.ModelCheckpoint(self.log_path+"/"+'weights.hdf5', 
@@ -145,16 +175,28 @@ class SparseEstimatorNetwork():
                                         #            embeddings_layer_names=None,
                                         #            embeddings_metadata=None)
                                         ])
+        if self.normalize_mode==2:
+            scaler_filename = "/scaler.save"
+            joblib.dump(self.scaler, self.log_path+scaler_filename)         
+
     def test(self, x_in):
-        x_scaled = self.scaler.transform(x_in.reshape(len(x_in),-1))
+        if self.normalize_mode==2:
+            x_scaled = self.scaler.transform(x_in.reshape(len(x_in),-1))
+        else:
+            x_scaled=x_in
+
         x_scaled_reshped =  x_scaled.reshape(x_in.shape)
         y = self.autoencoder.predict([x_scaled_reshped.reshape(*x_in.shape),np.zeros(x_in.shape), np.zeros((len(x_in), 1))])
-        y_true = self.scaler.inverse_transform(y.reshape(len(y),-1))
+        if self.normalize_mode==2:
+            y_true = self.scaler.inverse_transform(y.reshape(len(y),-1))
+        else:
+            y_true=y
+
         return y_true.reshape(*x_in.shape)
         
 
     def FindEstiamte(self, x_test, fileName="test.png"):
-        fig = plt.figure(figsize=[20, 20/3])
+        #fig = plt.figure(figsize=[20, 20/3])
         x_in = x_test
         y = self.test(x_in.reshape(1,x_in.shape[0],x_in.shape[1]))
 
@@ -189,7 +231,7 @@ class SparseEstimatorNetwork():
             ax.imshow(y[0]) #Layer cut
             
             Sampled_image = Sampled_image_model([x.reshape(1,x_test.shape[1],x_test.shape[2])])[0]
-            Sampled_image[Sampled_image<1e-6]=0
+            #Sampled_image[Sampled_image<1e-6]=0
             ax = fig.add_subplot(n, 3, i*3+3)
             ax.set_axis_off()
             ax.imshow(Sampled_image.reshape(x_test.shape[1],x_test.shape[2]))
