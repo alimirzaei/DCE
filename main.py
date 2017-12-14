@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 matplotlib.use('Agg')
 import tensorflow as tf
 import os
+import math
 
 #matplotlib.use('Qt5Agg')
 
@@ -27,8 +28,29 @@ FLAGS = flags.FLAGS
 # In[7]:
 #def main(_):
 on_cloud=1
-normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler 
+normalize_mode=4 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 normalize_type=0
+
+
+regularizer_coef=0.00000006/1024   #16 (10)
+#regularizer_coef=0.0000001/1024   #7 (36) #14 (8)
+regularizer_coef=0.0000002/1024   #9 (36) #12 (16) #39
+regularizer_coef=0.00000001/1024   #40 
+
+
+# 56 --> 24, 4SNR
+# 57 --> 48, 4SNR
+# 58 --> 48, Vari SNR
+# 60 --> 36, 4SNR
+
+encoded_dim=200
+epochs=50
+
+Number_of_pilot=36
+SNR_H=9
+SNR_L=0
+Noise_var_L=math.sqrt(pow(10,(-SNR_H/10))/25)
+Noise_var_H=math.sqrt(pow(10,(-SNR_L/10))/25)
 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
@@ -39,8 +61,8 @@ else:
     #data_path = os.path.join(FLAGS.dataset)
     data_path = os.path.join("/Local_data/chimage_data_3/","")
 
-
-Data_file="Ch_real_VehA_14.mat"
+Data_file=data_path+"/Ch_real_VehA_14.mat"
+#Data_file="Ch_real_VehA_14.mat"
 
 
 channels = scipy.io.loadmat(Data_file)['channels']
@@ -50,6 +72,8 @@ all_channel_images = np.vstack([reals, imags])
 
 if normalize_mode==1:
     all_channel_images = (all_channel_images+5)/10.0
+elif normalize_mode==4:
+    all_channel_images = (all_channel_images)/5
 
 #print(np.amax(all_channel_images))
 
@@ -57,20 +81,14 @@ if normalize_mode==1:
 
 #exit()
 
-X_train , X_test = train_test_split(all_channel_images, test_size=.1, random_state=4000)
+X_train , X_test = train_test_split(all_channel_images, test_size=.05, random_state=4000)
 
-regularizer_coef=0.00000006/1024   #16 (10)
-#regularizer_coef=0.0000001/1024   #7 (36) #14 (8)
-regularizer_coef=0.0000002/1024   #9 (36) #12 (16) 
 
-encoded_dim=200
-Number_of_pilot=16
-epochs=50
 
 network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
                                  Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                  on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
-                                 Noise_var_L=.1, Noise_var_H=1)
+                                 Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H)
 
 network.train(X_train, epochs=epochs)
 
@@ -78,7 +96,7 @@ network.train(X_train, epochs=epochs)
 Test_network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
                                       Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                       on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
-                                      Noise_var_L=.1, Noise_var_H=1)
+                                      Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H)
 
 Image_filename=log_path+"/generated.png"
 Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,50,fileName=Image_filename)

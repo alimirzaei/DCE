@@ -80,9 +80,11 @@ class SparseEstimatorNetwork():
         """
         decoder = Sequential()
         decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
-        decoder.add(Dense(1000, activation='relu'))
+        decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
+        decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu'))
-        decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
+        #decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
+        decoder.add(Dense(np.prod(img_shape)))
         decoder.add(Reshape(img_shape))
         decoder.summary()
         return decoder
@@ -94,6 +96,7 @@ class SparseEstimatorNetwork():
         noise = Input(shape=img_shape)
         variance = Input(shape=(1,))
         noisy_image = Lambda(AddNoise)([img, noise])
+     
         #concated = Concatenate([Flatten(input_shape=img_shape)(noisy_image), variance])
         encoded_repr = self.encoder(noisy_image)
         concated = concatenate([encoded_repr, variance])
@@ -110,7 +113,8 @@ class SparseEstimatorNetwork():
                 if self.normalize_mode==2:
                     scaler_filename = self.log_path+"/scaler.save"
                     if (os.path.isfile(scaler_filename)):
-                        scaler = joblib.load(scaler_filename)
+                        print("loaded scaleer")
+                        self.scaler = joblib.load(scaler_filename)
                     else:
                         print("train the model first!!!")
             else:
@@ -130,7 +134,7 @@ class SparseEstimatorNetwork():
 
     def train(self, x_in, batch_size=32, epochs=5):
 
-        Num_noise_per_image=5
+        Num_noise_per_image=4
 
         x_in= np.tile(x_in, (Num_noise_per_image,1,1))
 
@@ -150,8 +154,42 @@ class SparseEstimatorNetwork():
         for i in range(len(x_in)):
             var = np.random.uniform(self.Noise_var_L, self.Noise_var_H)
             noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-            variances.append(var)
+            if self.normalize_mode==4:
+                variances.append(25*var)
+            else:
+                variances.append(var)
             noises.append(noise)
+
+        # for i in range(0,len(x_in),4):
+        #     var = pow(10,(-0/10))/25
+        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+        #     if self.normalize_mode==4:
+        #         variances.append(25*var)
+        #     else:
+        #         variances.append(var)
+        #     noises.append(noise)
+        #     var = pow(10,(-3/10))/25
+        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+        #     if self.normalize_mode==4:
+        #         variances.append(25*var)
+        #     else:
+        #         variances.append(var)
+        #     noises.append(noise)
+        #     var = pow(10,(-6/10))/25
+        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+        #     if self.normalize_mode==4:
+        #         variances.append(25*var)
+        #     else:
+        #         variances.append(var)
+        #     noises.append(noise)
+        #     var = pow(10,(-9/10))/25
+        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+        #     if self.normalize_mode==4:
+        #         variances.append(25*var)
+        #     else:
+        #         variances.append(var)
+        #     noises.append(noise)
+
 
         noises = np.array(noises)
         variances = np.array(variances)
@@ -222,7 +260,7 @@ class SparseEstimatorNetwork():
         for i in range(n):
             x_in = x_test[np.random.randint(len(x_test))]
             x=copy.copy(x_in)
-            y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]))
+            y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]),0)
             ax = fig.add_subplot(n, 3, i*3+1)
             ax.set_axis_off()
             ax.imshow(x)
