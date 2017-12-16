@@ -158,7 +158,7 @@ class SparseEstimatorNetwork():
                 variances.append(25*var)
             elif self.normalize_mode==1:
                 noise=noise
-                #variances.append(np.log10(100*var)+1)
+                variances.append(np.log10(100*var)+1)
                 #variances.append(0)
             else:
                 variances.append(var)
