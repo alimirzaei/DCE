@@ -5,7 +5,7 @@ import copy
 import keras
 
 from keras.models import Sequential, Model
-from keras.layers import Dense, Input, Flatten, Reshape, Lambda, concatenate
+from keras.layers import Dense, Input, Flatten, Reshape, Lambda, concatenate, BatchNormalization
 from keras import regularizers
 from keras.initializers import RandomNormal
 
@@ -43,7 +43,7 @@ class SparseEstimatorNetwork():
         self.Noise_var_L=Noise_var_L
         self.Noise_var_H=Noise_var_H
         if self.normalize_mode==2:
-            self.scaler = MinMaxScaler((0,1))
+            self.scaler = MinMaxScaler((-1,1))
         self._initAndCompileFullModel(img_shape, encoded_dim)
         #self.scaler = StandardScaler(with_mean=True, with_std=True)
         
@@ -66,7 +66,8 @@ class SparseEstimatorNetwork():
                                     Number_of_pilot=self.Number_of_pilot))
         encoder.add(Dense(1000, activation='relu'))
         encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(encoded_dim))
+        encoder.add(Dense(encoded_dim, activation='sigmoid'))
+        #encoder.add(BatchNormalization())
         encoder.summary()
         return encoder
 
@@ -80,11 +81,10 @@ class SparseEstimatorNetwork():
         """
         decoder = Sequential()
         decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
-        decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
+        #decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
         decoder.add(Dense(1000, activation='relu')) 
-        #decoder.add(Dense(1000, activation='relu'))
-        #decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
-        decoder.add(Dense(np.prod(img_shape)))
+        #decoder.add(Dense(1000, activation='relu')) 
+        decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Reshape(img_shape))
         decoder.summary()
         return decoder
@@ -146,7 +146,7 @@ class SparseEstimatorNetwork():
         x_scaled_reshped =  x_scaled.reshape(x_in.shape)
         if (os.path.isfile(self.log_path+'/weights.hdf5')):
             self.autoencoder.load_weights('weights.hdf5')
-        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
+        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, verbose=0, mode='auto')
 
         noises = []
         variances = []
@@ -156,22 +156,22 @@ class SparseEstimatorNetwork():
             noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
             if self.normalize_mode==4:
                 variances.append(25*var)
+            elif self.normalize_mode==1:
+                noise=noise
+                #variances.append(np.log10(100*var)+1)
+                #variances.append(0)
             else:
                 variances.append(var)
             noises.append(noise)
 
-        # for i in range(0,len(x_in),4):
-        #     var = pow(10,(-0/10))/25
-        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-        #     if self.normalize_mode==4:
-        #         variances.append(25*var)
-        #     else:
-        #         variances.append(var)
-        #     noises.append(noise)
+        # for i in range(0,len(x_in),Num_noise_per_image):
         #     var = pow(10,(-3/10))/25
         #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
         #     if self.normalize_mode==4:
         #         variances.append(25*var)
+        #     elif self.normalize_mode==1:
+        #         noise=noise
+        #         variances.append(2*np.log10(100*var)+1)
         #     else:
         #         variances.append(var)
         #     noises.append(noise)
@@ -179,6 +179,9 @@ class SparseEstimatorNetwork():
         #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
         #     if self.normalize_mode==4:
         #         variances.append(25*var)
+        #     elif self.normalize_mode==1:
+        #         noise=noise
+        #         variances.append(2*np.log10(100*var)+1)
         #     else:
         #         variances.append(var)
         #     noises.append(noise)
@@ -186,10 +189,32 @@ class SparseEstimatorNetwork():
         #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
         #     if self.normalize_mode==4:
         #         variances.append(25*var)
+        #     elif self.normalize_mode==1:
+        #         noise=noise
+        #         variances.append(2*np.log10(100*var)+1)
         #     else:
         #         variances.append(var)
         #     noises.append(noise)
-
+        #     var = pow(10,(-12/10))/25
+        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+        #     if self.normalize_mode==4:
+        #         variances.append(25*var)
+        #     elif self.normalize_mode==1:
+        #         noise=noise
+        #         variances.append(2*np.log10(100*var)+1)
+        #     else:
+        #         variances.append(var)
+        #     noises.append(noise)
+        #     # var = pow(10,(-9/10))/25
+        #     # noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+        #     # if self.normalize_mode==4:
+        #     #     variances.append(25*var)
+        #     # elif self.normalize_mode==1:
+        #     #     noise=noise
+        #     #     variances.append(2*np.log10(100*var)+1)
+        #     # else:
+        #     #     variances.append(var)
+        #     # noises.append(noise)
 
         noises = np.array(noises)
         variances = np.array(variances)

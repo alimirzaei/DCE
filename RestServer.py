@@ -23,12 +23,20 @@ normalize_mode=2  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting
 regularizer_coef=0.00000001/1024   #40 
 normalize_mode=4  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
+normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 Number_of_pilot=48
-SNR_H=9
-SNR_L=0
-Noise_var_L=pow(10,(-SNR_H/10))/25
-Noise_var_H=pow(10,(-SNR_L/10))/25
+SNR_H=50
+SNR_L=50
+if normalize_mode==4:
+  Noise_var_L=pow(10,(-SNR_H/10))/25
+  Noise_var_H=pow(10,(-SNR_L/10))/25
+elif normalize_mode==1:
+  Noise_var_L=pow(10,(-SNR_H/10))/100
+  Noise_var_H=pow(10,(-SNR_L/10))/100
+else:
+  Noise_var_L=pow(10,(-SNR_H/10))
+  Noise_var_H=pow(10,(-SNR_L/10))
 
 
 log_path='../Share_weights'
@@ -45,6 +53,7 @@ import io
 import base64
 @app.route("/estimate_channel", methods = ['POST'])
 def estimate_channel():
+    global normalize_mode
 	#global tmp
 	#global network
 	#channel = np.array(json.loads(request.data.decode('utf-8')))
@@ -69,7 +78,9 @@ def estimate_channel():
     elif normalize_mode==4:
     	image= (image)/5
 
-    y = Test_network.test(image, var)
+    print(var)
+
+    y = Test_network.test(image, 0)
     
     if normalize_mode==1:
     	y= y*10-5
@@ -82,5 +93,33 @@ def estimate_channel():
     scipy.io.savemat(output, o)
     return base64.b64encode(output.getvalue())
 
+
+@app.route("/estimate_channel_vjason", methods = ['POST'])
+def estimate_channel_vjason():
+	global Test_network
+	global normalize_mode
+	data = json.loads(request.data.decode('utf-8'))
+	#print(data)
+
+	image=np.array(data['image'])
+	Noise_var = data['Noise_var']
+	#Noise_var=pow(10,(-50/10))
+	#print(Noise_var)
+	#print("-----------")
+	#print(image)
+	if normalize_mode==1:
+	    image= (image+5)/10.0
+	elif normalize_mode==4:
+		image= (image)/5
+	image=image.reshape(1,image.shape[0],image.shape[1])
+	y = Test_network.test(image, Noise_var)
+	if normalize_mode==1:
+		y= y*10-5
+	elif normalize_mode==4:
+		y=y*5
+
+	result = json.dumps(y[0].tolist())
+	return result
+
 if __name__ == "__main__":
-	app.run()
+	app.run()	

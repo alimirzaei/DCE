@@ -28,9 +28,7 @@ FLAGS = flags.FLAGS
 # In[7]:
 #def main(_):
 on_cloud=1
-normalize_mode=4 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
-normalize_type=0
-
+normalize_mode=1 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 regularizer_coef=0.00000006/1024   #16 (10)
 #regularizer_coef=0.0000001/1024   #7 (36) #14 (8)
@@ -43,14 +41,32 @@ regularizer_coef=0.00000001/1024   #40
 # 58 --> 48, Vari SNR
 # 60 --> 36, 4SNR
 
+#63 -->  9 and 12
+#64 34--> 18 only
+#67 --> no_noise-48 pilot - Mode 4
+#68 --> no_noise-48 pilot - Mode 2
+#68 --> no_noise-48 pilot - Mode 1
+
 encoded_dim=200
 epochs=50
 
-Number_of_pilot=36
-SNR_H=9
-SNR_L=0
-Noise_var_L=math.sqrt(pow(10,(-SNR_H/10))/25)
-Noise_var_H=math.sqrt(pow(10,(-SNR_L/10))/25)
+Number_of_pilot=48
+SNR_H=6
+SNR_L=12
+if normalize_mode==4:
+  Noise_var_L=pow(10,(-SNR_H/10))/25
+  Noise_var_H=pow(10,(-SNR_L/10))/25
+elif normalize_mode==1:
+  Noise_var_L=pow(10,(-SNR_H/10))/100
+  Noise_var_H=pow(10,(-SNR_L/10))/100
+else:
+  Noise_var_L=pow(10,(-SNR_H/10))
+  Noise_var_H=pow(10,(-SNR_L/10))
+
+print(Noise_var_H)
+print(Noise_var_L)
+print(2*np.log10(Noise_var_L*100+1))
+print(2*np.log10(Noise_var_H*100+1))
 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
