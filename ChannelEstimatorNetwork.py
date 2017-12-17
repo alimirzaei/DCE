@@ -31,8 +31,7 @@ class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
                  regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1):
         self.encoded_dim = encoded_dim
-        self.optimizer = Adam(0.0001)
-        self.optimizer_discriminator = Adam(0.00001)
+        self.optimizer = Adam(0.00005)
         self.img_shape = img_shape
         self.Number_of_pilot=Number_of_pilot
         self.regularizer_coef=regularizer_coef
@@ -83,6 +82,7 @@ class SparseEstimatorNetwork():
         decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
         #decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
         decoder.add(Dense(1000, activation='relu')) 
+        decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Reshape(img_shape))
@@ -102,7 +102,8 @@ class SparseEstimatorNetwork():
         concated = concatenate([encoded_repr, variance])
         gen_img = self.decoder(concated)
         self.autoencoder = Model([img, noise, variance], gen_img)
-        self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
+        #self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
+        self.autoencoder.compile(optimizer=self.optimizer, loss='mae')
         if self.test_mode==1:
             if self.on_cloud==0:
                 Weigth_data=self.log_path+"/"+"weights.hdf5"
@@ -158,7 +159,7 @@ class SparseEstimatorNetwork():
                 variances.append(25*var)
             elif self.normalize_mode==1:
                 noise=noise
-                variances.append(np.log10(100*var)+1)
+                variances.append(np.log10(100*var)+1.5)
                 #variances.append(0)
             else:
                 variances.append(var)

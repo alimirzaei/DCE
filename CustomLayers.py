@@ -100,6 +100,10 @@ class MaskLayer(Layer):
  
         mask=tf.where (select_vec_abs>self.treshold,x=Ones_tf, y=Zeros_tf)
         output=inputs*mask
+
+        # Weights_=self.kernel
+        # output=inputs*Weights_
+
         return output
 
     def compute_output_shape(self, input_shape):

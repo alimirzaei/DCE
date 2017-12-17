@@ -33,7 +33,9 @@ normalize_mode=1 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting
 regularizer_coef=0.00000006/1024   #16 (10)
 #regularizer_coef=0.0000001/1024   #7 (36) #14 (8)
 regularizer_coef=0.0000002/1024   #9 (36) #12 (16) #39
-regularizer_coef=0.00000001/1024   #40 
+regularizer_coef=0.00000001/1024   #81 
+regularizer_coef=0.000000046/1024   #82
+#regularizer_coef=0.0000001/1024   #82
 
 
 # 56 --> 24, 4SNR
@@ -47,11 +49,11 @@ regularizer_coef=0.00000001/1024   #40
 #68 --> no_noise-48 pilot - Mode 2
 #68 --> no_noise-48 pilot - Mode 1
 
-encoded_dim=200
-epochs=50
+encoded_dim=500
+epochs=40
 
 Number_of_pilot=48
-SNR_H=6
+SNR_H=3
 SNR_L=12
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
@@ -65,8 +67,8 @@ else:
 
 print(Noise_var_H)
 print(Noise_var_L)
-print(2*np.log10(Noise_var_L*100+1))
-print(2*np.log10(Noise_var_H*100+1))
+print(np.log10(Noise_var_L*100)+1.5)
+print(np.log10(Noise_var_H*100)+1.5)
 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)

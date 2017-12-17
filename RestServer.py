@@ -9,7 +9,7 @@ app = Flask(__name__)
  
 on_cloud=0
 input_shape=(72, 14)
-encoded_dim=200   
+encoded_dim=500   
 
 regularizer_coef=0.0000001/1024
 Number_of_pilot=36
@@ -21,7 +21,7 @@ regularizer_coef=0.000000002/1024   #40
 normalize_mode=2  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 regularizer_coef=0.00000001/1024   #40 
-normalize_mode=4  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+regularizer_coef=0.000000046/1024   #40 
 
 normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
