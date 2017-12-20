@@ -12,12 +12,13 @@ from keras.initializers import RandomNormal
 from keras.optimizers import Adam
 import numpy as np
 from keras import backend as K
-from CustomLayers import MaskLayer
+from CustomLayers import MaskLayer, Max_S
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.externals import joblib
 import tensorflow as tf
 import os
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 matplotlib.use('Agg')
@@ -26,6 +27,7 @@ def AddNoise(input_args):
     x = input_args[0]
     noise = input_args[1]
     return x+noise
+
 
 class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
@@ -47,8 +49,19 @@ class SparseEstimatorNetwork():
         #self.scaler = StandardScaler(with_mean=True, with_std=True)
         
         
+    def _genSelectorModel(self, img_shape):
+        selector = Sequential()
+        selector.add(Flatten(input_shape=img_shape))
+        #selector.add(Dense(img_shape[0]*img_shape[1], activation='relu'))
+        selector.add(MaskLayer( input_dim=img_shape, output_dim=img_shape[0]*img_shape[1], 
+                                 kernel_regularizer= regularizers.l1(self.regularizer_coef), 
+                                 kernel_constraint= Max_S(Number_of_pilot=self.Number_of_pilot),
+                                 Number_of_pilot=self.Number_of_pilot))
 
-    def _genEncoderModel(self, img_shape, encoded_dim):
+        selector.summary()
+        return selector
+
+    def _genEncoderModel(self, encoded_dim,input_dim):
         """ Build Encoder Model Based on Paper Configuration
         Args:
             img_shape (tuple) : shape of input image
@@ -58,12 +71,18 @@ class SparseEstimatorNetwork():
                 """
 
         encoder = Sequential()
-        encoder.add(Flatten(input_shape=img_shape))
-        encoder.add(MaskLayer(input_dim=img_shape, activation='linear', 
-                                    kernel_regularizer= regularizers.l1(self.regularizer_coef), 
-                                    #kernel_regularizer= My_l1_reg, 
-                                    Number_of_pilot=self.Number_of_pilot))
-        encoder.add(Dense(1000, activation='relu'))
+        #encoder.add(Flatten(input_shape=img_shape))
+        #encoder.add(Reshape(input_dim_t, input_shape=input_dim_t))
+
+        # encoder.add(MaskLayer(input_shape=input_dim_t,output_dim=[input_dim_t], activation='linear', 
+        #                            kernel_regularizer= regularizers.l1(self.regularizer_coef), 
+        #                            kernel_constraint= Max_S(Number_of_pilot=self.Number_of_pilot),
+        #                            Number_of_pilot=self.Number_of_pilot))
+        # encoder.add(MaskLayer(input_dim=img_shape, activation='linear', 
+        #                             kernel_regularizer= regularizers.l1(self.regularizer_coef), 
+        #                             #kernel_regularizer= My_l1_reg, 
+        #                             Number_of_pilot=self.Number_of_pilot))
+        encoder.add(Dense(1000, input_shape=input_dim, activation='relu'))
         encoder.add(Dense(1000, activation='relu'))
         encoder.add(Dense(encoded_dim, activation='sigmoid'))
         #encoder.add(BatchNormalization())
@@ -82,7 +101,7 @@ class SparseEstimatorNetwork():
         decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
         #decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
         decoder.add(Dense(1000, activation='relu')) 
-        decoder.add(Dense(1000, activation='relu')) 
+        #decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Reshape(img_shape))
@@ -90,20 +109,27 @@ class SparseEstimatorNetwork():
         return decoder
 
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
-        self.encoder = self._genEncoderModel(img_shape, encoded_dim)
+        self.selector= self._genSelectorModel (img_shape)
+        self.encoder = self._genEncoderModel(encoded_dim, input_dim=[img_shape[0]*img_shape[1]+1])
         self.decoder = self._getDecoderModel(encoded_dim, img_shape)
+
         img = Input(shape=img_shape)
         noise = Input(shape=img_shape)
         variance = Input(shape=(1,))
         noisy_image = Lambda(AddNoise)([img, noise])
+
+        selected_img= self.selector(noisy_image)
+
+        input_concated = concatenate([selected_img, variance])
      
         #concated = Concatenate([Flatten(input_shape=img_shape)(noisy_image), variance])
-        encoded_repr = self.encoder(noisy_image)
+        encoded_repr = self.encoder(input_concated)
+
         concated = concatenate([encoded_repr, variance])
         gen_img = self.decoder(concated)
         self.autoencoder = Model([img, noise, variance], gen_img)
-        #self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
-        self.autoencoder.compile(optimizer=self.optimizer, loss='mae')
+        self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
+        #self.autoencoder.compile(optimizer=self.optimizer, loss='mae')
         if self.test_mode==1:
             if self.on_cloud==0:
                 Weigth_data=self.log_path+"/"+"weights.hdf5"
@@ -135,7 +161,7 @@ class SparseEstimatorNetwork():
 
     def train(self, x_in, batch_size=32, epochs=5):
 
-        Num_noise_per_image=4
+        Num_noise_per_image=5
 
         x_in= np.tile(x_in, (Num_noise_per_image,1,1))
 
@@ -159,7 +185,8 @@ class SparseEstimatorNetwork():
                 variances.append(25*var)
             elif self.normalize_mode==1:
                 noise=noise
-                variances.append(np.log10(100*var)+1.5)
+                #variances.append(np.log10(100*var)+1.5)
+                variances.append((np.log10(var*100)+2)/2)
                 #variances.append(0)
             else:
                 variances.append(var)

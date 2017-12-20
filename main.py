@@ -34,8 +34,9 @@ regularizer_coef=0.00000006/1024   #16 (10)
 #regularizer_coef=0.0000001/1024   #7 (36) #14 (8)
 regularizer_coef=0.0000002/1024   #9 (36) #12 (16) #39
 regularizer_coef=0.00000001/1024   #81 
-regularizer_coef=0.000000046/1024   #82
+regularizer_coef=0.0000000465/1024   #82
 #regularizer_coef=0.0000001/1024   #82
+regularizer_coef=0.0000000005   #82
 
 
 # 56 --> 24, 4SNR
@@ -49,12 +50,21 @@ regularizer_coef=0.000000046/1024   #82
 #68 --> no_noise-48 pilot - Mode 2
 #68 --> no_noise-48 pilot - Mode 1
 
-encoded_dim=500
+
+#93 and #94
+
+#96 SNR_H=10, SNR_L=25
+#97 SNR_H=10, SNR_L=15 --> new cutom layer 
+
+
+encoded_dim=400
 epochs=40
 
 Number_of_pilot=48
-SNR_H=3
-SNR_L=12
+SNR_H=0
+SNR_L=15
+
+
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
   Noise_var_H=pow(10,(-SNR_L/10))/25
@@ -67,8 +77,8 @@ else:
 
 print(Noise_var_H)
 print(Noise_var_L)
-print(np.log10(Noise_var_L*100)+1.5)
-print(np.log10(Noise_var_H*100)+1.5)
+print((np.log10(Noise_var_L*100)+2)/2)
+print((np.log10(Noise_var_H*100)+2)/2)
 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)

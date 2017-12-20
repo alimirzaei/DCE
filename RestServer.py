@@ -9,10 +9,9 @@ app = Flask(__name__)
  
 on_cloud=0
 input_shape=(72, 14)
-encoded_dim=500   
+encoded_dim=400   
 
 regularizer_coef=0.0000001/1024
-Number_of_pilot=36
 
 regularizer_coef=0.0000002/1024   
 normalize_mode=3  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
@@ -21,13 +20,17 @@ regularizer_coef=0.000000002/1024   #40
 normalize_mode=2  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 regularizer_coef=0.00000001/1024   #40 
-regularizer_coef=0.000000046/1024   #40 
+regularizer_coef=0.0000000465/1024   #40 
+regularizer_coef=0.000002   #82
+regularizer_coef=0.00000002   #82
+regularizer_coef=0.0000000005   #82
+
 
 normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 Number_of_pilot=48
-SNR_H=50
-SNR_L=50
+SNR_H=0
+SNR_L=15
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
   Noise_var_H=pow(10,(-SNR_L/10))/25
@@ -37,6 +40,11 @@ elif normalize_mode==1:
 else:
   Noise_var_L=pow(10,(-SNR_H/10))
   Noise_var_H=pow(10,(-SNR_L/10))
+
+print(Noise_var_H)
+print(Noise_var_L)
+print(np.log10(Noise_var_L*100)+2)
+print(np.log10(Noise_var_H*100)+2)
 
 
 log_path='../Share_weights'
