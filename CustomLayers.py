@@ -36,8 +36,10 @@ class Max_S(keras.constraints.Constraint):
         select_vec_abs=w
         maxes, indx= tf.nn.top_k((select_vec_abs),self.Num_pilot)
         self.treshold=maxes[0,self.Num_pilot-1]
-
-        select_vec_abs *= K.cast(K.greater_equal(select_vec_abs, self.treshold), K.floatx())
+        
+        # Ones_tf=tf.constant(np.ones(shape=w.shape), dtype=tf.float32)
+        # select_vec_abs = Ones_tf*K.cast(K.greater_equal(select_vec_abs, self.treshold), K.floatx())
+        select_vec_abs = select_vec_abs*K.cast(K.greater_equal(select_vec_abs, self.treshold), K.floatx())
        
         #w *= K.cast(K.greater_equal(w, 0.), K.floatx())
         return select_vec_abs
@@ -92,16 +94,42 @@ class MaskLayer(Layer):
         if dtype is None:
             dtype = K.floatx()
 
-        # select_vec=K.variable(initializer([1,1009]),
+        # select_vec=K.variable(initializer(shape),
         #                     dtype=dtype,
-        #                     name=name)
-        select_vec=K.variable(initializer(shape),
-                            dtype=dtype,
-                            name=name)
-        #,
-        #                    constraint=constraint)
-        weight=select_vec
+        #                     name=name,                  
+        #                     constraint=constraint)
+
+        # if regularizer is not None:
+        #     self.add_loss(regularizer(select_vec))
         
+        # if trainable:
+        #     self._trainable_weights.append(select_vec)
+        # else:
+        #     self._non_trainable_weights.append(select_vec)
+
+        a=np.zeros(shape=shape[-1])
+        #a[0:shape[1]:shape[1]/self.Number_of_pilot]=1
+        
+        #idx= range(0, a.size, a.size//self.Number_of_pilot)
+
+        #idx=14*[0 5 11 17 23 29 35 41 47 53 59 65 71]
+        #i=6+14*(3+[0 5 11 17 23 29 35 41 47 53 59 65])
+        #i=13+14*([0 5 11 17 23 29 35 41 47 53 59 65])
+        #idx=[14*i for i in range(0, 72,6)]+[6+14*(3+i) for i in range(0, 72,6)]+[13+14*(i) for i in range(0, 72,6)]
+        idx= [14*i for i in range(0, 72,5)]+[7+14*(i) for i in range(3, 72,4)]+[13+14*(i) for i in range(0, 72,5)]
+        #print(idx)
+        #print(a.size)
+        a[idx]=1;
+        #print(a[0:10])
+        #print(a[10:20])
+        #print(a[20:30])
+
+        # select_vec=tf.constant(value=a,dtype=dtype)
+        # trainable=False
+
+        select_vec=K.variable(value=a,dtype=dtype)
+        trainable=False
+
         if regularizer is not None:
             self.add_loss(regularizer(select_vec))
         
@@ -110,7 +138,8 @@ class MaskLayer(Layer):
         else:
             self._non_trainable_weights.append(select_vec)
         
-        return weight
+        
+        return select_vec #weight
 
 
     def build(self, input_shape):

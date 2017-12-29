@@ -33,7 +33,7 @@ class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
                  regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1):
         self.encoded_dim = encoded_dim
-        self.optimizer = Adam(0.00005)
+        self.optimizer = Adam(0.0001)
         self.img_shape = img_shape
         self.Number_of_pilot=Number_of_pilot
         self.regularizer_coef=regularizer_coef
@@ -84,6 +84,7 @@ class SparseEstimatorNetwork():
         #                             Number_of_pilot=self.Number_of_pilot))
         encoder.add(Dense(1000, input_shape=input_dim, activation='relu'))
         encoder.add(Dense(1000, activation='relu'))
+        #encoder.add(Dense(500, activation='relu'))
         encoder.add(Dense(encoded_dim, activation='sigmoid'))
         #encoder.add(BatchNormalization())
         encoder.summary()
@@ -161,7 +162,8 @@ class SparseEstimatorNetwork():
 
     def train(self, x_in, batch_size=32, epochs=5):
 
-        Num_noise_per_image=5
+        Num_noise_per_image=4
+
 
         x_in= np.tile(x_in, (Num_noise_per_image,1,1))
 
@@ -173,7 +175,7 @@ class SparseEstimatorNetwork():
         x_scaled_reshped =  x_scaled.reshape(x_in.shape)
         if (os.path.isfile(self.log_path+'/weights.hdf5')):
             self.autoencoder.load_weights('weights.hdf5')
-        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, verbose=0, mode='auto')
+        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
 
         noises = []
         variances = []
@@ -303,8 +305,8 @@ class SparseEstimatorNetwork():
         return y
 
     def generateAndPlot(self, x_test, n = 10, fileName="generated.png"):
-        Sampled_image_model = K.function([self.encoder.layers[0].input],
-                                  [self.encoder.layers[1].output])
+        Sampled_image_model = K.function([self.selector.layers[0].input],
+                                  [self.selector.layers[1].output])
 
         fig = plt.figure(figsize=[20, 20*n/3])
         Test_error=np.array(np.zeros(shape=(1,n)))

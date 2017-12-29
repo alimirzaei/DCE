@@ -9,28 +9,97 @@ app = Flask(__name__)
  
 on_cloud=0
 input_shape=(72, 14)
-encoded_dim=400   
 
-regularizer_coef=0.0000001/1024
 
-regularizer_coef=0.0000002/1024   
-normalize_mode=3  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+#126
+regularizer_coef=0.0000000005   
+encoded_dim=60
+Number_of_pilot=48
+log_path='../Share_weights/48_60_p0000000005_126'
 
-regularizer_coef=0.000000002/1024   #40 
-normalize_mode=2  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+#128
+regularizer_coef=0.000000001      
+encoded_dim=40
+Number_of_pilot=36
+log_path='../Share_weights/36_40_p000000001_128'
 
-regularizer_coef=0.00000001/1024   #40 
-regularizer_coef=0.0000000465/1024   #40 
-regularizer_coef=0.000002   #82
-regularizer_coef=0.00000002   #82
-regularizer_coef=0.0000000005   #82
+#130
+regularizer_coef=0.0000002/1024      
+encoded_dim=40
+Number_of_pilot=36
+log_path='../Share_weights/36_40_p0000000005_130_weigh_sel'
+
+
+#131
+regularizer_coef=0.000000001      
+encoded_dim=40
+Number_of_pilot=48
+log_path='../Share_weights/48_40_p000000001_131'
+
+#135
+regularizer_coef=0.0000000001      
+encoded_dim=200
+Number_of_pilot=48
+log_path='../Share_weights/48_200_p000000001_135'
+
+
+#136
+regularizer_coef=0.0000000001      
+encoded_dim=250
+Number_of_pilot=48
+log_path='../Share_weights/48_250_p000000001_136'
+
+
+#139
+regularizer_coef=0.0000000001      
+encoded_dim=25
+Number_of_pilot=48
+log_path='../Share_weights/48_25_Fixed_139_only12'
+
+
+
+#140
+regularizer_coef=0.0000000001      
+encoded_dim=40
+Number_of_pilot=36
+log_path='../Share_weights/48_40_Fixed_140_only12'
+
+# #138
+# regularizer_coef=0.0000000001      
+# encoded_dim=250
+# Number_of_pilot=48
+# log_path='../Share_weights/48_250_p000000001_138_only12'
+
+#142 5-16
+regularizer_coef=0.0000000001      
+encoded_dim=30
+Number_of_pilot=48
+log_path='../Share_weights/48_30_Fixed_142'
+
+
+#143 12-14
+regularizer_coef=0.0000000001      
+encoded_dim=10
+Number_of_pilot=48
+log_path='../Share_weights/48_10_Fixed_143_12and13'
+
+#144 12-14
+regularizer_coef=0.0000000001      
+encoded_dim=600
+Number_of_pilot=48
+log_path='../Share_weights/48_600_Fixed_143_12and13'
+
+#146 12-14
+regularizer_coef=0.0000000001      
+encoded_dim=40
+Number_of_pilot=48
+log_path='../Share_weights/48_600_Fixed_143_12and13_newmod'
 
 
 normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
-Number_of_pilot=48
-SNR_H=0
-SNR_L=15
+SNR_H=5
+SNR_L=16
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
   Noise_var_H=pow(10,(-SNR_L/10))/25
@@ -43,11 +112,8 @@ else:
 
 print(Noise_var_H)
 print(Noise_var_L)
-print(np.log10(Noise_var_L*100)+2)
-print(np.log10(Noise_var_H*100)+2)
 
 
-log_path='../Share_weights'
 
 
 Test_network = SparseEstimatorNetwork(img_shape=input_shape, encoded_dim=encoded_dim,
@@ -88,7 +154,7 @@ def estimate_channel():
 
     print(var)
 
-    y = Test_network.test(image, 0)
+    y = Test_network.test(image, var)
     
     if normalize_mode==1:
     	y= y*10-5
@@ -119,6 +185,7 @@ def estimate_channel_vjason():
 	    image= (image+5)/10.0
 	elif normalize_mode==4:
 		image= (image)/5
+
 	image=image.reshape(1,image.shape[0],image.shape[1])
 	y = Test_network.test(image, Noise_var)
 	if normalize_mode==1:
