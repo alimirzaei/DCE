@@ -22,25 +22,38 @@ import math
 flags = tf.app.flags
 flags.DEFINE_string("dataset", "", "The name of dataset [celebA, mnist, lsun]")
 flags.DEFINE_string("logdir", "", "Directory name to save the image samples [output]")
+flags.DEFINE_string("dataset2", "", "The name of the second dataset [celebA, mnist, lsun]")
 FLAGS = flags.FLAGS
 
+data_type=1 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 
 # In[7]:
 #def main(_):
 
-on_cloud=1
+on_cloud=0
 normalize_mode=1 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
     #data_path = os.path.join("/data/",FLAGS.dataset)
     data_path = os.path.join(FLAGS.dataset)
+    data_path2 = os.path.join(FLAGS.dataset2)
 else:
     log_path = os.path.join("./output/",FLAGS.logdir)
     #data_path = os.path.join(FLAGS.dataset)
-    data_path = os.path.join("/Local_data/chimage_data_3/","")
+    if data_type==0:
+      data_path = os.path.join("/Local_data/chimage_data_3/","")
+    elif data_type==1:
+      data_path = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Perfect_channel/","")
+      data_path2 = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Noisy_channels/","")
 
-Data_file=data_path+"/Ch_real_VehA_14.mat"
-#Data_file="Ch_real_VehA_14.mat"
+if data_type==0:
+  Data_file=data_path+"/Ch_real_VehA_14.mat"
+elif data_type==1:
+  Data_file1=data_path+"/My_perfect_H_12.mat"
+  Data_file2=data_path2+"/My_noisy_H_12.mat"
+
+print(Data_file1)
+print(Data_file2)
 
 #regularizer_coef=0.0000002/1024   
 Train_model=1
@@ -98,7 +111,7 @@ Number_of_pilot=48
 epochs=40
 
 SNR_H=12
-SNR_L=14
+SNR_L=12
 
 
 if normalize_mode==4:
@@ -117,41 +130,62 @@ print((np.log10(Noise_var_L*100)+2)/2)
 print((np.log10(Noise_var_H*100)+2)/2)
 
 
+if data_type==0:
+  channels = scipy.io.loadmat(Data_file)['channels']
+  reals = np.real(channels)
+  imags = np.imag(channels)
+  all_channel_images = np.vstack([reals, imags])
 
-channels = scipy.io.loadmat(Data_file)['channels']
-reals = np.real(channels)
-imags = np.imag(channels)
-all_channel_images = np.vstack([reals, imags])
-
-if normalize_mode==1:
+  if normalize_mode==1:
     all_channel_images = (all_channel_images+5)/10.0
-elif normalize_mode==4:
+  elif normalize_mode==4:
     all_channel_images = (all_channel_images)/5
 
-#print(np.amax(all_channel_images))
+  X_train , X_test = train_test_split(all_channel_images, test_size=.05, random_state=4000)
 
-#print(np.amin(all_channel_images))
+elif data_type==1:
+  channels_noisy = scipy.io.loadmat(Data_file1)['My_perfect_H']
+  reals = np.real(channels_noisy)
+  imags = np.imag(channels_noisy)
+  all_channel_noisy_images = np.vstack([reals, imags])
+  
+  channels_perfect = scipy.io.loadmat(Data_file2)['My_noisy_H']
+  reals = np.real(channels_perfect)
+  imags = np.imag(channels_perfect)
+  all_channel_perfect_images = np.vstack([reals, imags])
 
-#exit()
+  all_channel_noisy_images = (all_channel_noisy_images+5)/10.0
+  all_channel_perfect_images = (all_channel_perfect_images+5)/10.0
 
-X_train , X_test = train_test_split(all_channel_images, test_size=.05, random_state=4000)
+  X_train , X_test, Y_train, Y_test = train_test_split(all_channel_noisy_images,all_channel_perfect_images, test_size=.05, random_state=4000)
+
+
 
 if Train_model==1:
   network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
-                                  Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
-                                  on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
-                                  Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H)
+                                Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
+                                on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
+                                Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type)
 
+if data_type==0:
   network.train(X_train, epochs=epochs)
+elif data_type==1:
+  network.train(X_train, Y_train, epochs=epochs)
+
+
 
 if Test_model==1:
   Test_network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
                                         Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                         on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
-                                        Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H)
+                                        Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type)
 
   Image_filename=log_path+"/generated.png"
-  Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,50,fileName=Image_filename)
+  if data_type==0:
+    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,50,fileName=Image_filename)
+  elif data_type==1:
+    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,Y_test,50,fileName=Image_filename)
+
   print(np.sqrt(Test_Error))
 
   print(np.mean(np.sqrt(Test_Error)))

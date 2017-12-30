@@ -31,7 +31,7 @@ def AddNoise(input_args):
 
 class SparseEstimatorNetwork():
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
-                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1):
+                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1, data_type=0):
         self.encoded_dim = encoded_dim
         self.optimizer = Adam(0.0001)
         self.img_shape = img_shape
@@ -43,6 +43,7 @@ class SparseEstimatorNetwork():
         self.normalize_mode=normalize_mode
         self.Noise_var_L=Noise_var_L
         self.Noise_var_H=Noise_var_H
+        self.data_type=data_type
         if self.normalize_mode==2:
             self.scaler = MinMaxScaler((-1,1))
         self._initAndCompileFullModel(img_shape, encoded_dim)
@@ -160,119 +161,174 @@ class SparseEstimatorNetwork():
                         print("train the model first!!!")
 
 
-    def train(self, x_in, batch_size=32, epochs=5):
+    def train(self, x_in, y_in=[], batch_size=32, epochs=5):
 
-        Num_noise_per_image=4
+        if self.data_type==0:
+
+            Num_noise_per_image=4
 
 
-        x_in= np.tile(x_in, (Num_noise_per_image,1,1))
+            x_in= np.tile(x_in, (Num_noise_per_image,1,1))
 
-        if self.normalize_mode==2:
-            x_scaled = self.scaler.fit_transform(x_in.reshape(len(x_in),-1))
-        else:
-            x_scaled=x_in
-
-        x_scaled_reshped =  x_scaled.reshape(x_in.shape)
-        if (os.path.isfile(self.log_path+'/weights.hdf5')):
-            self.autoencoder.load_weights('weights.hdf5')
-        earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
-
-        noises = []
-        variances = []
-
-        for i in range(len(x_in)):
-            var = np.random.uniform(self.Noise_var_L, self.Noise_var_H)
-            noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-            if self.normalize_mode==4:
-                variances.append(25*var)
-            elif self.normalize_mode==1:
-                noise=noise
-                #variances.append(np.log10(100*var)+1.5)
-                variances.append((np.log10(var*100)+2)/2)
-                #variances.append(0)
+            if self.normalize_mode==2:
+                x_scaled = self.scaler.fit_transform(x_in.reshape(len(x_in),-1))
             else:
-                variances.append(var)
-            noises.append(noise)
+                x_scaled=x_in
 
-        # for i in range(0,len(x_in),Num_noise_per_image):
-        #     var = pow(10,(-3/10))/25
-        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-        #     if self.normalize_mode==4:
-        #         variances.append(25*var)
-        #     elif self.normalize_mode==1:
-        #         noise=noise
-        #         variances.append(2*np.log10(100*var)+1)
-        #     else:
-        #         variances.append(var)
-        #     noises.append(noise)
-        #     var = pow(10,(-6/10))/25
-        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-        #     if self.normalize_mode==4:
-        #         variances.append(25*var)
-        #     elif self.normalize_mode==1:
-        #         noise=noise
-        #         variances.append(2*np.log10(100*var)+1)
-        #     else:
-        #         variances.append(var)
-        #     noises.append(noise)
-        #     var = pow(10,(-9/10))/25
-        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-        #     if self.normalize_mode==4:
-        #         variances.append(25*var)
-        #     elif self.normalize_mode==1:
-        #         noise=noise
-        #         variances.append(2*np.log10(100*var)+1)
-        #     else:
-        #         variances.append(var)
-        #     noises.append(noise)
-        #     var = pow(10,(-12/10))/25
-        #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-        #     if self.normalize_mode==4:
-        #         variances.append(25*var)
-        #     elif self.normalize_mode==1:
-        #         noise=noise
-        #         variances.append(2*np.log10(100*var)+1)
-        #     else:
-        #         variances.append(var)
-        #     noises.append(noise)
-        #     # var = pow(10,(-9/10))/25
-        #     # noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
-        #     # if self.normalize_mode==4:
-        #     #     variances.append(25*var)
-        #     # elif self.normalize_mode==1:
-        #     #     noise=noise
-        #     #     variances.append(2*np.log10(100*var)+1)
-        #     # else:
-        #     #     variances.append(var)
-        #     # noises.append(noise)
+            x_scaled_reshped =  x_scaled.reshape(x_in.shape)
+            if (os.path.isfile(self.log_path+'/weights.hdf5')):
+                self.autoencoder.load_weights('weights.hdf5')
+            earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
 
-        noises = np.array(noises)
-        variances = np.array(variances)
+            noises = []
+            variances = []
 
-        self.autoencoder.fit([x_scaled_reshped, noises, variances], x_scaled_reshped, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
-                              callbacks=[earlyStopping,
-                                        keras.callbacks.ModelCheckpoint(self.log_path+"/"+'weights.hdf5', 
-                                           verbose=0, 
-                                           monitor='val_loss',
-                                           #save_best_only=False, 
-                                           save_best_only=True, 
-                                           save_weights_only=False, 
-                                           mode='auto', 
-                                           period=1)
-                                        #,keras.callbacks.TensorBoard(log_dir=self.log_path, 
-                                        #            histogram_freq=0, 
-                                        #            batch_size=batch_size, write_graph=True,
-                                        #            write_grads=False,
-                                        #            write_images=False,
-                                        #            embeddings_freq=0,
-                                        #            embeddings_layer_names=None,
-                                        #            embeddings_metadata=None)
-                                        ])
-        if self.normalize_mode==2:
-            scaler_filename = "/scaler.save"
-            joblib.dump(self.scaler, self.log_path+scaler_filename)         
+            for i in range(len(x_in)):
+                var = np.random.uniform(self.Noise_var_L, self.Noise_var_H)
+                noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+                if self.normalize_mode==4:
+                    variances.append(25*var)
+                elif self.normalize_mode==1:
+                    noise=noise
+                    #variances.append(np.log10(100*var)+1.5)
+                    variances.append((np.log10(var*100)+2)/2)
+                    #variances.append(0)
+                else:
+                    variances.append(var)
+                noises.append(noise)
+
+            # for i in range(0,len(x_in),Num_noise_per_image):
+            #     var = pow(10,(-3/10))/25
+            #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+            #     if self.normalize_mode==4:
+            #         variances.append(25*var)
+            #     elif self.normalize_mode==1:
+            #         noise=noise
+            #         variances.append(2*np.log10(100*var)+1)
+            #     else:
+            #         variances.append(var)
+            #     noises.append(noise)
+            #     var = pow(10,(-6/10))/25
+            #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+            #     if self.normalize_mode==4:
+            #         variances.append(25*var)
+            #     elif self.normalize_mode==1:
+            #         noise=noise
+            #         variances.append(2*np.log10(100*var)+1)
+            #     else:
+            #         variances.append(var)
+            #     noises.append(noise)
+            #     var = pow(10,(-9/10))/25
+            #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+            #     if self.normalize_mode==4:
+            #         variances.append(25*var)
+            #     elif self.normalize_mode==1:
+            #         noise=noise
+            #         variances.append(2*np.log10(100*var)+1)
+            #     else:
+            #         variances.append(var)
+            #     noises.append(noise)
+            #     var = pow(10,(-12/10))/25
+            #     noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+            #     if self.normalize_mode==4:
+            #         variances.append(25*var)
+            #     elif self.normalize_mode==1:
+            #         noise=noise
+            #         variances.append(2*np.log10(100*var)+1)
+            #     else:
+            #         variances.append(var)
+            #     noises.append(noise)
+            #     # var = pow(10,(-9/10))/25
+            #     # noise = np.sqrt(var)/np.sqrt(2)*np.random.randn(*x_in[0].shape)
+            #     # if self.normalize_mode==4:
+            #     #     variances.append(25*var)
+            #     # elif self.normalize_mode==1:
+            #     #     noise=noise
+            #     #     variances.append(2*np.log10(100*var)+1)
+            #     # else:
+            #     #     variances.append(var)
+            #     # noises.append(noise)
+
+            noises = np.array(noises)
+            variances = np.array(variances)
+
+            self.autoencoder.fit([x_scaled_reshped, noises, variances], x_scaled_reshped, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
+                                  callbacks=[earlyStopping,
+                                            keras.callbacks.ModelCheckpoint(self.log_path+"/"+'weights.hdf5', 
+                                               verbose=0, 
+                                               monitor='val_loss',
+                                               #save_best_only=False, 
+                                               save_best_only=True, 
+                                               save_weights_only=False, 
+                                               mode='auto', 
+                                               period=1)
+                                            #,keras.callbacks.TensorBoard(log_dir=self.log_path, 
+                                            #            histogram_freq=0, 
+                                            #            batch_size=batch_size, write_graph=True,
+                                            #            write_grads=False,
+                                            #            write_images=False,
+                                            #            embeddings_freq=0,
+                                            #            embeddings_layer_names=None,
+                                            #            embeddings_metadata=None)
+                                            ])
+            if self.normalize_mode==2:
+                scaler_filename = "/scaler.save"
+                joblib.dump(self.scaler, self.log_path+scaler_filename)         
+
+        elif self.data_type==1:
+
+            x_scaled=x_in
+            y_scaled=y_in
+
+            x_scaled_reshped =  x_scaled.reshape(x_in.shape)
+            y_scaled_reshped =  y_scaled.reshape(y_in.shape)
+            
+            if (os.path.isfile(self.log_path+'/weights.hdf5')):
+                self.autoencoder.load_weights('weights.hdf5')
+            
+            earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
+
+            noises = []
+            variances = []
+            var_v=((np.log10(self.Noise_var_L*100)+2)/2)
+
+            for i in range(len(x_in)):
+                if self.normalize_mode==1:
+                    noise = 0*np.random.randn(*x_in[0].shape)
+                    #variances.append(np.log10(100*var)+1.5)
+                    noises.append(noise)
+                    variances.append(var_v)
+                    #variances.append(0)
+                else:
+                    error()
+
+            noises = np.array(noises)
+            variances = np.array(variances)
+
+            self.autoencoder.fit([x_scaled_reshped, noises, variances], y_scaled_reshped, epochs=epochs, batch_size=batch_size, shuffle=True,validation_split=0.15,
+                                  callbacks=[earlyStopping,
+                                            keras.callbacks.ModelCheckpoint(self.log_path+"/"+'weights.hdf5', 
+                                               verbose=0, 
+                                               monitor='val_loss',
+                                               #save_best_only=False, 
+                                               save_best_only=True, 
+                                               save_weights_only=False, 
+                                               mode='auto', 
+                                               period=1)
+                                            #,keras.callbacks.TensorBoard(log_dir=self.log_path, 
+                                            #            histogram_freq=0, 
+                                            #            batch_size=batch_size, write_graph=True,
+                                            #            write_grads=False,
+                                            #            write_images=False,
+                                            #            embeddings_freq=0,
+                                            #            embeddings_layer_names=None,
+                                            #            embeddings_metadata=None)
+                                            ])
+
+
 
     def test(self, x_in, var):
+
         if self.normalize_mode==2:
             x_scaled = self.scaler.transform(x_in.reshape(len(x_in),-1))
         else:
@@ -288,52 +344,90 @@ class SparseEstimatorNetwork():
         return y_true.reshape(*x_in.shape)
         
 
-    def FindEstiamte(self, x_test, fileName="test.png"):
-        #fig = plt.figure(figsize=[20, 20/3])
-        x_in = x_test
-        y = self.test(x_in.reshape(1,x_in.shape[0],x_in.shape[1]))
+    # def FindEstiamte(self, x_test, fileName="test.png"):
+    #     #fig = plt.figure(figsize=[20, 20/3])
+    #     x_in = x_test
+    #     y = self.test(x_in.reshape(1,x_in.shape[0],x_in.shape[1]))
 
-        fig = plt.figure(figsize=[20, 20/2])
-        i=0
-        ax = fig.add_subplot(1, 2, i*2+1)
-        ax.set_axis_off()
-        ax.imshow(x_in)
-        ax = fig.add_subplot(1, 2, i*2+2)
-        ax.set_axis_off()
-        ax.imshow(y[0]) #Layer cut
-        fig.savefig(fileName)
-        return y
+    #     fig = plt.figure(figsize=[20, 20/2])
+    #     i=0
+    #     ax = fig.add_subplot(1, 2, i*2+1)
+    #     ax.set_axis_off()
+    #     ax.imshow(x_in)
+    #     ax = fig.add_subplot(1, 2, i*2+2)
+    #     ax.set_axis_off()
+    #     ax.imshow(y[0]) #Layer cut
+    #     fig.savefig(fileName)
+    #     return y
 
-    def generateAndPlot(self, x_test, n = 10, fileName="generated.png"):
-        Sampled_image_model = K.function([self.selector.layers[0].input],
-                                  [self.selector.layers[1].output])
+    def generateAndPlot(self, x_test, y_test=[], n = 10, fileName="generated.png"):
+        if self.data_type==0:
+            Sampled_image_model = K.function([self.selector.layers[0].input],
+                                      [self.selector.layers[1].output])
 
-        fig = plt.figure(figsize=[20, 20*n/3])
-        Test_error=np.array(np.zeros(shape=(1,n)))
-        Y_all=[]
-        X_all=[]
-        for i in range(n):
-            x_in = x_test[np.random.randint(len(x_test))]
-            x=copy.copy(x_in)
-            y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]),0)
-            ax = fig.add_subplot(n, 3, i*3+1)
-            ax.set_axis_off()
-            ax.imshow(x)
-            ax = fig.add_subplot(n, 3, i*3+2)
-            ax.set_axis_off()
-            ax.imshow(y[0]) #Layer cut
-            
-            Sampled_image = Sampled_image_model([x.reshape(1,x_test.shape[1],x_test.shape[2])])[0]
-            #Sampled_image[Sampled_image<1e-6]=0
-            ax = fig.add_subplot(n, 3, i*3+3)
-            ax.set_axis_off()
-            ax.imshow(Sampled_image.reshape(x_test.shape[1],x_test.shape[2]))
-            Test_error[0,i]=np.mean(np.square(x-y[0]))
-            X_all.append(x)
-            Y_all.append(y[0])
+            fig = plt.figure(figsize=[20, 20*n/3])
+            Test_error=np.array(np.zeros(shape=(1,n)))
+            Y_all=[]
+            X_all=[]
+            for i in range(n):
+                x_in = x_test[np.random.randint(len(x_test))]
+                x=copy.copy(x_in)
+                y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]),0)
+                ax = fig.add_subplot(n, 3, i*3+1)
+                ax.set_axis_off()
+                ax.imshow(x)
+                ax = fig.add_subplot(n, 3, i*3+2)
+                ax.set_axis_off()
+                ax.imshow(y[0]) #Layer cut
+                
+                Sampled_image = Sampled_image_model([x.reshape(1,x_test.shape[1],x_test.shape[2])])[0]
+                #Sampled_image[Sampled_image<1e-6]=0
+                ax = fig.add_subplot(n, 3, i*3+3)
+                ax.set_axis_off()
+                ax.imshow(Sampled_image.reshape(x_test.shape[1],x_test.shape[2]))
+                Test_error[0,i]=np.mean(np.square(x-y[0]))
+                X_all.append(x)
+                Y_all.append(y[0])
 
-        fig.savefig(fileName)
-        return Test_error, Y_all, X_all
+            fig.savefig(fileName)
+            return Test_error, Y_all, X_all
+        elif self.data_type==1:
+            Sampled_image_model = K.function([self.selector.layers[0].input],
+                                      [self.selector.layers[1].output])
+
+            fig = plt.figure(figsize=[20, 20*n/4])
+            Test_error=np.array(np.zeros(shape=(1,n)))
+            Y_all=[]
+            X_all=[]
+            var_v=((np.log10(self.Noise_var_L*100)+2)/2)            
+            for i in range(n):
+                t_idx=np.random.randint(len(x_test))
+                x_in = x_test[t_idx]
+                Y_in = y_test[t_idx]
+                x=copy.copy(x_in)
+                y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]),var_v)
+                ax = fig.add_subplot(n, 3, i*4+1)
+                ax.set_axis_off()
+                ax.imshow(x)
+                ax = fig.add_subplot(n, 3, i*4+2)
+                ax.set_axis_off()
+                ax.imshow(y[0]) #Layer cut
+                ax = fig.add_subplot(n, 3, i*4+3)
+                ax.set_axis_off()
+                ax.imshow(Y_in) #Layer cut
+                
+                Sampled_image = Sampled_image_model([x.reshape(1,x_test.shape[1],x_test.shape[2])])[0]
+                #Sampled_image[Sampled_image<1e-6]=0
+                ax = fig.add_subplot(n, 3, i*4+4)
+                ax.set_axis_off()
+                ax.imshow(Sampled_image.reshape(x_test.shape[1],x_test.shape[2]))
+                Test_error[0,i]=np.mean(np.square(Y_in-y[0]))
+                X_all.append(x)
+                Y_all.append(y[0])
+
+            fig.savefig(fileName)
+            return Test_error, Y_all, X_all
+
         
 if __name__=='__main__':
     # here is to just test the network
