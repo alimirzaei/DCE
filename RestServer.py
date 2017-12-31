@@ -95,11 +95,17 @@ encoded_dim=40
 Number_of_pilot=48
 log_path='../Share_weights/48_600_Fixed_143_12and13_newmod'
 
+#148 12-12
+regularizer_coef=0.0000000001      
+encoded_dim=40
+Number_of_pilot=48
+log_path='../Share_weights/48_Noisy_chan'
 
+data_type=1
 normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
-SNR_H=5
-SNR_L=16
+SNR_H=12
+SNR_L=12
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
   Noise_var_H=pow(10,(-SNR_L/10))/25
@@ -119,7 +125,7 @@ print(Noise_var_L)
 Test_network = SparseEstimatorNetwork(img_shape=input_shape, encoded_dim=encoded_dim,
                                       Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                       on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
-                                      Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H)
+                                      Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type)
 
 
 import scipy.io

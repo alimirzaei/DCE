@@ -406,19 +406,19 @@ class SparseEstimatorNetwork():
                 Y_in = y_test[t_idx]
                 x=copy.copy(x_in)
                 y = self.test(x.reshape(1,x_test.shape[1],x_test.shape[2]),var_v)
-                ax = fig.add_subplot(n, 3, i*4+1)
+                ax = fig.add_subplot(n, 4, i*4+1)
                 ax.set_axis_off()
                 ax.imshow(x)
-                ax = fig.add_subplot(n, 3, i*4+2)
+                ax = fig.add_subplot(n, 4, i*4+2)
                 ax.set_axis_off()
                 ax.imshow(y[0]) #Layer cut
-                ax = fig.add_subplot(n, 3, i*4+3)
+                ax = fig.add_subplot(n, 4, i*4+3)
                 ax.set_axis_off()
                 ax.imshow(Y_in) #Layer cut
                 
                 Sampled_image = Sampled_image_model([x.reshape(1,x_test.shape[1],x_test.shape[2])])[0]
                 #Sampled_image[Sampled_image<1e-6]=0
-                ax = fig.add_subplot(n, 3, i*4+4)
+                ax = fig.add_subplot(n, 4, i*4+4)
                 ax.set_axis_off()
                 ax.imshow(Sampled_image.reshape(x_test.shape[1],x_test.shape[2]))
                 Test_error[0,i]=np.mean(np.square(Y_in-y[0]))

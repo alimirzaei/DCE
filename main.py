@@ -56,7 +56,7 @@ print(Data_file1)
 print(Data_file2)
 
 #regularizer_coef=0.0000002/1024   
-Train_model=1
+Train_model=0
 Test_model=1
 
 
@@ -102,6 +102,11 @@ encoded_dim=600
 Number_of_pilot=48
 
 #146 12-14
+regularizer_coef=0.0000000001      
+encoded_dim=40
+Number_of_pilot=48
+
+#148 12-12
 regularizer_coef=0.0000000001      
 encoded_dim=40
 Number_of_pilot=48
@@ -167,10 +172,10 @@ if Train_model==1:
                                 on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
                                 Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type)
 
-if data_type==0:
-  network.train(X_train, epochs=epochs)
-elif data_type==1:
-  network.train(X_train, Y_train, epochs=epochs)
+  if data_type==0:
+    network.train(X_train, epochs=epochs)
+  elif data_type==1:
+    network.train(X_train, Y_train, epochs=epochs)
 
 
 
