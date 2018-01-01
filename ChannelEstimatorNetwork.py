@@ -30,6 +30,14 @@ def AddNoise(input_args):
 
 
 class SparseEstimatorNetwork():
+
+    # def get_my_MSE_loss():
+    #     def my_MSE(y_true, y_pred):
+    #         return K.mean(K.square(y_pred - y_true))
+    #     return my_MSE
+    
+
+
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
                  regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1, data_type=0):
         self.encoded_dim = encoded_dim
@@ -66,11 +74,11 @@ class SparseEstimatorNetwork():
         initializer = 'he_normal'
 
         Conv = Sequential()
-        Conv.add(Conv2D(64, (32, 12), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
-        Conv.add(Conv2D(32, (16, 6), activation = 'relu', kernel_initializer = initializer , padding='same'))
-        # Conv.add(Conv2D(96, (32, 12), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
-        # Conv.add(Conv2D(48, (16, 6), activation = 'relu', kernel_initializer = initializer , padding='same'))
-        # Conv.add(Conv2D(24, (8, 3), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        #Conv.add(Conv2D(64, (32, 12), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
+        #Conv.add(Conv2D(32, (16, 6), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(64, (32, 6), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(32, (16, 3), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(8, (8, 2), activation = 'relu', kernel_initializer = initializer , padding='same'))
 
         #Conv.add(MaxPooling2D(pool_size=(4, 2)))
         #Conv.add(Dropout(0.1))
@@ -79,8 +87,8 @@ class SparseEstimatorNetwork():
         #Conv.add(MaxPooling2D(pool_size=(4, 2)))
         #Conv.add(Dropout(0.1))
 
-        #Conv.add(Conv2D(1, (1, 1),  activation = 'sigmoid', kernel_initializer = initializer , padding='same'))
-        Conv.add(Conv2D(1, (1, 1), kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(1, (1, 1),  activation = 'relu', kernel_initializer = initializer , padding='same'))
+        #Conv.add(Conv2D(1, (1, 1), kernel_initializer = initializer , padding='same'))
        
         Conv.summary()
         return Conv
@@ -107,13 +115,13 @@ class SparseEstimatorNetwork():
         #                             #kernel_regularizer= My_l1_reg, 
         #                             Number_of_pilot=self.Number_of_pilot))
         encoder.add(Dense(1000, input_shape=input_dim, activation='relu'))
-        encoder.add(Dropout(0.1))
+        encoder.add(Dropout(0.01))
         # encoder.add(Dense(500, input_shape=input_dim, activation='relu'))
         # encoder.add(Dropout(0.05))
         #encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(500, activation='relu'))
+        encoder.add(Dense(1000, activation='relu'))
         #encoder.add(Dense(encoded_dim))
-        encoder.add(Dense(encoded_dim, activation='sigmoid'))
+        encoder.add(Dense(encoded_dim, activation='relu'))
         #encoder.add(BatchNormalization())
         encoder.summary()
         return encoder
@@ -132,15 +140,19 @@ class SparseEstimatorNetwork():
         #decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
         #decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
-        #decoder.add(Dense(1000, activation='relu')) 
+        decoder.add(Dense(1000, activation='relu')) 
         
-        decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
-        #decoder.add(Dense(np.prod(img_shape)))
+        #decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
+        decoder.add(Dense(np.prod(img_shape)))
         decoder.add(Reshape(img_shape))
         decoder.summary()
         return decoder
+    
 
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
+        def my_MSE(y_true, y_pred):
+            return K.mean(K.square(y_pred - y_true),axis=[-2,-1])
+
         self.selector= self._genSelectorModel (img_shape)
         self.conv_p= self._genConvModel ((*img_shape,1))
         self.encoder = self._genEncoderModel(encoded_dim, input_dim=[img_shape[0]*img_shape[1]+1])
@@ -167,6 +179,7 @@ class SparseEstimatorNetwork():
         concated = concatenate([encoded_repr, variance])
         gen_img = self.decoder(concated)
         self.autoencoder = Model([img, noise, variance], gen_img)
+        #self.autoencoder.compile(optimizer=self.optimizer, loss=my_MSE)
         self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
         #self.autoencoder.compile(optimizer=self.optimizer, loss='mae')
         if self.test_mode==1:
@@ -196,13 +209,15 @@ class SparseEstimatorNetwork():
                         self.scaler = joblib.load(scaler_filename)
                     else:
                         print("train the model first!!!")
+    
 
 
     def train(self, x_in, y_in=[], batch_size=32, epochs=5):
 
+
         if self.data_type==0:
 
-            Num_noise_per_image=1
+            Num_noise_per_image=4
 
 
             x_in= np.tile(x_in, (Num_noise_per_image,1,1))
@@ -213,8 +228,9 @@ class SparseEstimatorNetwork():
                 x_scaled=x_in
 
             x_scaled_reshped =  x_scaled.reshape(x_in.shape)
-            if (os.path.isfile(self.log_path+'/weights.hdf5')):
-                self.autoencoder.load_weights('weights.hdf5')
+            Weigth_data=self.log_path+"/"+"weights.hdf5"
+            if (os.path.isfile(Weigth_data)):
+                self.autoencoder.load_weights(Weigth_data)
             earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, verbose=0, mode='auto')
 
             noises = []
@@ -229,6 +245,11 @@ class SparseEstimatorNetwork():
                     noise=noise
                     #variances.append(np.log10(100*var)+1.5)
                     variances.append((np.log10(var*100)+2)/2)
+                    #variances.append(0)
+                elif self.normalize_mode==5:
+                    noise=noise
+                    #variances.append(np.log10(100*var)+1.5)
+                    variances.append((-np.log10(var)+np.log10(self.Noise_var_L))*10)
                     #variances.append(0)
                 else:
                     variances.append(var)
@@ -320,17 +341,27 @@ class SparseEstimatorNetwork():
             x_scaled_reshped =  x_scaled.reshape(x_in.shape)
             y_scaled_reshped =  y_scaled.reshape(y_in.shape)
             
-            if (os.path.isfile(self.log_path+'/weights.hdf5')):
-                self.autoencoder.load_weights('weights.hdf5')
+            Weigth_data=self.log_path+"/"+"weights.hdf5"
+            if (os.path.isfile(Weigth_data)):
+                self.autoencoder.load_weights(Weigth_data)
             
             earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
 
             noises = []
             variances = []
-            var_v=((np.log10(self.Noise_var_L*100)+2)/2)
+            if self.normalize_mode==1:
+                var_v=((np.log10(self.Noise_var_L)+2)/2)
+            elif self.normalize_mode==5:
+                var_v=0
 
             for i in range(len(x_in)):
                 if self.normalize_mode==1:
+                    noise = 0*np.random.randn(*x_in[0].shape)
+                    #variances.append(np.log10(100*var)+1.5)
+                    noises.append(noise)
+                    variances.append(var_v)
+                    #variances.append(0)
+                elif self.normalize_mode==5:
                     noise = 0*np.random.randn(*x_in[0].shape)
                     #variances.append(np.log10(100*var)+1.5)
                     noises.append(noise)

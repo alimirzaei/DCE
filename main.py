@@ -31,7 +31,7 @@ data_type=0 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 #def main(_):
 
 on_cloud=1
-normalize_mode=1 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+normalize_mode=5 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
     #data_path = os.path.join("/data/",FLAGS.dataset)
@@ -65,7 +65,7 @@ Number_of_pilot=48
 
 #155 12-12
 regularizer_coef=0.0000000001      
-encoded_dim=150
+encoded_dim=300
 Number_of_pilot=48
 
 
@@ -74,8 +74,8 @@ Number_of_pilot=48
 #encoded_dim=40
 epochs=40
 
-SNR_H=12
-SNR_L=12
+SNR_H=3
+SNR_L=15
 
 
 if normalize_mode==4:
@@ -84,14 +84,19 @@ if normalize_mode==4:
 elif normalize_mode==1:
   Noise_var_L=pow(10,(-SNR_H/10))/100
   Noise_var_H=pow(10,(-SNR_L/10))/100
+elif normalize_mode==5:
+  Noise_var_L=pow(10,(-SNR_H/10))
+  Noise_var_H=pow(10,(-SNR_L/10))
 else:
   Noise_var_L=pow(10,(-SNR_H/10))
   Noise_var_H=pow(10,(-SNR_L/10))
 
 print(Noise_var_H)
 print(Noise_var_L)
-print((np.log10(Noise_var_L*100)+2)/2)
-print((np.log10(Noise_var_H*100)+2)/2)
+print((np.log10(Noise_var_L)+2)/2)
+print((np.log10(Noise_var_H)+2)/2)
+print(-np.log10(Noise_var_L)*10)
+print(-np.log10(Noise_var_H)*10)
 
 
 if data_type==0:
@@ -102,6 +107,8 @@ if data_type==0:
 
   if normalize_mode==1:
     all_channel_images = (all_channel_images+5)/10.0
+  if normalize_mode==5:
+    all_channel_images = (all_channel_images+5)
   elif normalize_mode==4:
     all_channel_images = (all_channel_images)/5
 
@@ -118,8 +125,12 @@ elif data_type==1:
   imags = np.imag(channels_perfect)
   all_channel_perfect_images = np.vstack([reals, imags])
 
-  all_channel_noisy_images = (all_channel_noisy_images+5)/10.0
-  all_channel_perfect_images = (all_channel_perfect_images+5)/10.0
+  if normalize_mode==1:
+    all_channel_noisy_images = (all_channel_noisy_images+5)/10.0
+    all_channel_perfect_images = (all_channel_perfect_images+5)/10.0
+  if normalize_mode==5:
+    all_channel_noisy_images = (all_channel_noisy_images+5)
+    all_channel_perfect_images = (all_channel_perfect_images+5)
 
   X_train , X_test, Y_train, Y_test = train_test_split(all_channel_noisy_images,all_channel_perfect_images, test_size=.05, random_state=4000)
 
