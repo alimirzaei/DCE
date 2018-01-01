@@ -65,7 +65,7 @@ class SparseEstimatorNetwork():
         selector.add(MaskLayer( input_dim=img_shape, output_dim=img_shape[0]*img_shape[1], 
                                  kernel_regularizer= regularizers.l1(self.regularizer_coef), 
                                  kernel_constraint= Max_S(Number_of_pilot=self.Number_of_pilot),
-                                 Number_of_pilot=self.Number_of_pilot))
+                                 Number_of_pilot=self.Number_of_pilot, Fixed=0))
 
         selector.summary()
         return selector
@@ -115,7 +115,7 @@ class SparseEstimatorNetwork():
         #                             #kernel_regularizer= My_l1_reg, 
         #                             Number_of_pilot=self.Number_of_pilot))
         encoder.add(Dense(1000, input_shape=input_dim, activation='relu'))
-        encoder.add(Dropout(0.01))
+        #encoder.add(Dropout(0.01))
         # encoder.add(Dense(500, input_shape=input_dim, activation='relu'))
         # encoder.add(Dropout(0.05))
         #encoder.add(Dense(1000, activation='relu'))
@@ -217,7 +217,7 @@ class SparseEstimatorNetwork():
 
         if self.data_type==0:
 
-            Num_noise_per_image=4
+            Num_noise_per_image=1
 
 
             x_in= np.tile(x_in, (Num_noise_per_image,1,1))

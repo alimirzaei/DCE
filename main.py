@@ -66,7 +66,7 @@ Number_of_pilot=48
 #155 12-12
 regularizer_coef=0.0000000001      
 encoded_dim=300
-Number_of_pilot=48
+Number_of_pilot=32
 
 
 

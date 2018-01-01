@@ -120,11 +120,24 @@ encoded_dim=100
 Number_of_pilot=48
 log_path='../Share_weights/48_conv_drop'
 
-#154 12-12
+#163 3-15 - 48
 regularizer_coef=0.0000000001      
 encoded_dim=300
 Number_of_pilot=48
 log_path='../Share_weights/48_conv_drop_v2'
+
+#local 3-15 - 34
+regularizer_coef=0.0000000001      
+encoded_dim=300
+Number_of_pilot=32
+log_path='../Share_weights/32_conv_partial'
+
+#164 3-15 - 34
+regularizer_coef=0.0000000001      
+encoded_dim=300
+Number_of_pilot=32
+log_path='../Share_weights/32_conv'
+
 
 
 data_type=0

@@ -62,6 +62,7 @@ class MaskLayer(Layer):
                  bias_constraint=None,
                  Number_of_pilot=None,
                  output_dim=None,
+                 Fixed=0,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
@@ -77,6 +78,7 @@ class MaskLayer(Layer):
         self.input_spec = InputSpec(min_ndim=2)
         self.supports_masking = True
         self.Number_of_pilot=Number_of_pilot
+        self.Fixed=Fixed
         self.output_dim = output_dim
         #self.input_shape=input_shape
         super(MaskLayer, self).__init__(**kwargs)        
@@ -88,55 +90,59 @@ class MaskLayer(Layer):
                    initializer=None,
                    regularizer=None,
                    constraint=None,
-                   trainable=True):
+                   trainable=True,
+                   Fixed=0):
 
         initializer = initializers.get(initializer)
         if dtype is None:
             dtype = K.floatx()
 
-        # select_vec=K.variable(initializer(shape),
-        #                     dtype=dtype,
-        #                     name=name,                  
-        #                     constraint=constraint)
+        Fixed=0
+        if Fixed==0:
+            select_vec=K.variable(initializer(shape),
+                                dtype=dtype,
+                                name=name,                  
+                                constraint=constraint)
 
-        # if regularizer is not None:
-        #     self.add_loss(regularizer(select_vec))
-        
-        # if trainable:
-        #     self._trainable_weights.append(select_vec)
-        # else:
-        #     self._non_trainable_weights.append(select_vec)
+            if regularizer is not None:
+                self.add_loss(regularizer(select_vec))
+            
+            if trainable:
+                self._trainable_weights.append(select_vec)
+            else:
+                self._non_trainable_weights.append(select_vec)
 
-        a=np.zeros(shape=shape[-1])
-        #a[0:shape[1]:shape[1]/self.Number_of_pilot]=1
-        
-        #idx= range(0, a.size, a.size//self.Number_of_pilot)
+        elif Fixed==1:
+            a=np.zeros(shape=shape[-1])
+            #a[0:shape[1]:shape[1]/self.Number_of_pilot]=1
+            
+            #idx= range(0, a.size, a.size//self.Number_of_pilot)
 
-        #idx=14*[0 5 11 17 23 29 35 41 47 53 59 65 71]
-        #i=6+14*(3+[0 5 11 17 23 29 35 41 47 53 59 65])
-        #i=13+14*([0 5 11 17 23 29 35 41 47 53 59 65])
-        #idx=[14*i for i in range(0, 72,6)]+[6+14*(3+i) for i in range(0, 72,6)]+[13+14*(i) for i in range(0, 72,6)]
-        idx= [14*i for i in range(0, 72,5)]+[7+14*(i) for i in range(3, 72,4)]+[13+14*(i) for i in range(0, 72,5)]
-        #print(idx)
-        #print(a.size)
-        a[idx]=1;
-        #print(a[0:10])
-        #print(a[10:20])
-        #print(a[20:30])
+            #idx=14*[0 5 11 17 23 29 35 41 47 53 59 65 71]
+            #i=6+14*(3+[0 5 11 17 23 29 35 41 47 53 59 65])
+            #i=13+14*([0 5 11 17 23 29 35 41 47 53 59 65])
+            #idx=[14*i for i in range(0, 72,6)]+[6+14*(3+i) for i in range(0, 72,6)]+[13+14*(i) for i in range(0, 72,6)]
+            idx= [14*i for i in range(0, 72,5)]+[7+14*(i) for i in range(3, 72,4)]+[13+14*(i) for i in range(0, 72,5)]
+            #print(idx)
+            #print(a.size)
+            a[idx]=1;
+            #print(a[0:10])
+            #print(a[10:20])
+            #print(a[20:30])
 
-        # select_vec=tf.constant(value=a,dtype=dtype)
-        # trainable=False
+            # select_vec=tf.constant(value=a,dtype=dtype)
+            # trainable=False
 
-        select_vec=K.variable(value=a,dtype=dtype)
-        trainable=False
+            select_vec=K.variable(value=a,dtype=dtype)
+            trainable=False
 
-        if regularizer is not None:
-            self.add_loss(regularizer(select_vec))
-        
-        if trainable:
-            self._trainable_weights.append(select_vec)
-        else:
-            self._non_trainable_weights.append(select_vec)
+            if regularizer is not None:
+                self.add_loss(regularizer(select_vec))
+            
+            if trainable:
+                self._trainable_weights.append(select_vec)
+            else:
+                self._non_trainable_weights.append(select_vec)
         
         
         return select_vec #weight
@@ -151,7 +157,8 @@ class MaskLayer(Layer):
                                     initializer=self.kernel_initializer,
                                     regularizer=self.kernel_regularizer,
                                     constraint=self.kernel_constraint,
-                                    name='kernel')
+                                    name='kernel',
+                                    Fixed=self.Fixed)
         self.bias = None
 
         #self.input_spec = InputSpec(min_ndim=2, axes={-1: input_shape})
