@@ -25,12 +25,12 @@ flags.DEFINE_string("logdir", "", "Directory name to save the image samples [out
 flags.DEFINE_string("dataset2", "", "The name of the second dataset [celebA, mnist, lsun]")
 FLAGS = flags.FLAGS
 
-data_type=1 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
+data_type=0 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 
 # In[7]:
 #def main(_):
 
-on_cloud=0
+on_cloud=1
 normalize_mode=1 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
@@ -52,64 +52,23 @@ elif data_type==1:
   Data_file1=data_path+"/My_perfect_H_12.mat"
   Data_file2=data_path2+"/My_noisy_H_12.mat"
 
-print(Data_file1)
-print(Data_file2)
 
 #regularizer_coef=0.0000002/1024   
-Train_model=0
+Train_model=1
 Test_model=1
 
 
-#126
-regularizer_coef=0.0000000005   
-encoded_dim=60
-Number_of_pilot=48
-
-#128
-regularizer_coef=0.000000001      
-encoded_dim=40
-Number_of_pilot=36
-
-#131
-regularizer_coef=0.000000001      
-encoded_dim=40
-Number_of_pilot=48
-
-#139
+#154 12-12
 regularizer_coef=0.0000000001      
-encoded_dim=25
+encoded_dim=100
+Number_of_pilot=48
+
+#155 12-12
+regularizer_coef=0.0000000001      
+encoded_dim=150
 Number_of_pilot=48
 
 
-#140
-regularizer_coef=0.0000000001      
-encoded_dim=40
-Number_of_pilot=36
-
-#142 5-16
-regularizer_coef=0.0000000001      
-encoded_dim=30
-Number_of_pilot=48
-
-#143 12-14
-regularizer_coef=0.0000000001      
-encoded_dim=10
-Number_of_pilot=48
-
-#144 12-14
-regularizer_coef=0.0000000001      
-encoded_dim=600
-Number_of_pilot=48
-
-#146 12-14
-regularizer_coef=0.0000000001      
-encoded_dim=40
-Number_of_pilot=48
-
-#148 12-12
-regularizer_coef=0.0000000001      
-encoded_dim=40
-Number_of_pilot=48
 
 
 #encoded_dim=40

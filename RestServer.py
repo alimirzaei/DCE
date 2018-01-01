@@ -100,6 +100,32 @@ regularizer_coef=0.0000000001
 encoded_dim=40
 Number_of_pilot=48
 log_path='../Share_weights/48_Noisy_chan'
+data_type=1
+
+#149 12-12
+regularizer_coef=0.0000000001      
+encoded_dim=40
+Number_of_pilot=48
+log_path='../Share_weights/48_conv'
+
+#149 12-12
+regularizer_coef=0.0000000001      
+encoded_dim=300
+Number_of_pilot=48
+log_path='../Share_weights/48_conv_drop_noisy'
+
+#154 12-12
+regularizer_coef=0.0000000001      
+encoded_dim=100
+Number_of_pilot=48
+log_path='../Share_weights/48_conv_drop'
+
+# #154 12-12
+# regularizer_coef=0.0000000001      
+# encoded_dim=150
+# Number_of_pilot=48
+# log_path='../Share_weights/48_conv_drop_v2'
+
 
 data_type=1
 normalize_mode=1  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 

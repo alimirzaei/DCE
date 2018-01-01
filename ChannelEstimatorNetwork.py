@@ -5,7 +5,7 @@ import copy
 import keras
 
 from keras.models import Sequential, Model
-from keras.layers import Dense, Input, Flatten, Reshape, Lambda, concatenate, BatchNormalization
+from keras.layers import Dense, Input, Flatten, Reshape, Lambda, concatenate, BatchNormalization, Conv2D, MaxPooling2D, Dropout
 from keras import regularizers
 from keras.initializers import RandomNormal
 
@@ -62,6 +62,29 @@ class SparseEstimatorNetwork():
         selector.summary()
         return selector
 
+    def _genConvModel(self, img_shape):
+        initializer = 'he_normal'
+
+        Conv = Sequential()
+        Conv.add(Conv2D(64, (32, 12), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(32, (16, 6), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        # Conv.add(Conv2D(96, (32, 12), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
+        # Conv.add(Conv2D(48, (16, 6), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        # Conv.add(Conv2D(24, (8, 3), activation = 'relu', kernel_initializer = initializer , padding='same'))
+
+        #Conv.add(MaxPooling2D(pool_size=(4, 2)))
+        #Conv.add(Dropout(0.1))
+        
+        #Conv.add(Conv2D(64, (4, 3), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        #Conv.add(MaxPooling2D(pool_size=(4, 2)))
+        #Conv.add(Dropout(0.1))
+
+        #Conv.add(Conv2D(1, (1, 1),  activation = 'sigmoid', kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(1, (1, 1), kernel_initializer = initializer , padding='same'))
+       
+        Conv.summary()
+        return Conv
+
     def _genEncoderModel(self, encoded_dim,input_dim):
         """ Build Encoder Model Based on Paper Configuration
         Args:
@@ -84,8 +107,12 @@ class SparseEstimatorNetwork():
         #                             #kernel_regularizer= My_l1_reg, 
         #                             Number_of_pilot=self.Number_of_pilot))
         encoder.add(Dense(1000, input_shape=input_dim, activation='relu'))
-        encoder.add(Dense(1000, activation='relu'))
-        #encoder.add(Dense(500, activation='relu'))
+        encoder.add(Dropout(0.1))
+        # encoder.add(Dense(500, input_shape=input_dim, activation='relu'))
+        # encoder.add(Dropout(0.05))
+        #encoder.add(Dense(1000, activation='relu'))
+        encoder.add(Dense(500, activation='relu'))
+        #encoder.add(Dense(encoded_dim))
         encoder.add(Dense(encoded_dim, activation='sigmoid'))
         #encoder.add(BatchNormalization())
         encoder.summary()
@@ -100,29 +127,39 @@ class SparseEstimatorNetwork():
             A sequential keras model
         """
         decoder = Sequential()
+        #Conv.add(Dropout(0.1))
         decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
         #decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
-        decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
+        #decoder.add(Dense(1000, activation='relu')) 
+        
         decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
+        #decoder.add(Dense(np.prod(img_shape)))
         decoder.add(Reshape(img_shape))
         decoder.summary()
         return decoder
 
     def _initAndCompileFullModel(self, img_shape, encoded_dim):
         self.selector= self._genSelectorModel (img_shape)
+        self.conv_p= self._genConvModel ((*img_shape,1))
         self.encoder = self._genEncoderModel(encoded_dim, input_dim=[img_shape[0]*img_shape[1]+1])
+        #self.encoder = self._genEncoderModel(encoded_dim, input_dim=[32*13])
         self.decoder = self._getDecoderModel(encoded_dim, img_shape)
 
         img = Input(shape=img_shape)
         noise = Input(shape=img_shape)
         variance = Input(shape=(1,))
         noisy_image = Lambda(AddNoise)([img, noise])
-
         selected_img= self.selector(noisy_image)
+        selected_image_2D=Reshape((*img_shape,1))(selected_img)
+        print(img_shape)
+        print(selected_image_2D.get_shape())
+        
+        Conv_image_2D=self.conv_p(selected_image_2D)
+        Conv_image_flatten=Flatten()(Conv_image_2D)
 
-        input_concated = concatenate([selected_img, variance])
+        input_concated = concatenate([Conv_image_flatten, variance])
      
         #concated = Concatenate([Flatten(input_shape=img_shape)(noisy_image), variance])
         encoded_repr = self.encoder(input_concated)
@@ -165,7 +202,7 @@ class SparseEstimatorNetwork():
 
         if self.data_type==0:
 
-            Num_noise_per_image=4
+            Num_noise_per_image=1
 
 
             x_in= np.tile(x_in, (Num_noise_per_image,1,1))
@@ -178,7 +215,7 @@ class SparseEstimatorNetwork():
             x_scaled_reshped =  x_scaled.reshape(x_in.shape)
             if (os.path.isfile(self.log_path+'/weights.hdf5')):
                 self.autoencoder.load_weights('weights.hdf5')
-            earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, verbose=0, mode='auto')
+            earlyStopping=keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, verbose=0, mode='auto')
 
             noises = []
             variances = []
