@@ -39,7 +39,8 @@ class SparseEstimatorNetwork():
 
 
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
-                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, Noise_var_L=.01, Noise_var_H=.1, data_type=0):
+                 regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, 
+                 Noise_var_L=.01, Noise_var_H=.1, data_type=0, Enable_conv=0,Fixed_pilot=0):
         self.encoded_dim = encoded_dim
         self.optimizer = Adam(0.0001)
         self.img_shape = img_shape
@@ -52,6 +53,8 @@ class SparseEstimatorNetwork():
         self.Noise_var_L=Noise_var_L
         self.Noise_var_H=Noise_var_H
         self.data_type=data_type
+        self.Enable_conv=Enable_conv
+        self.Fixed_pilot=Fixed_pilot
         if self.normalize_mode==2:
             self.scaler = MinMaxScaler((-1,1))
         self._initAndCompileFullModel(img_shape, encoded_dim)
@@ -65,7 +68,7 @@ class SparseEstimatorNetwork():
         selector.add(MaskLayer( input_dim=img_shape, output_dim=img_shape[0]*img_shape[1], 
                                  kernel_regularizer= regularizers.l1(self.regularizer_coef), 
                                  kernel_constraint= Max_S(Number_of_pilot=self.Number_of_pilot),
-                                 Number_of_pilot=self.Number_of_pilot, Fixed=0))
+                                 Number_of_pilot=self.Number_of_pilot, Fixed=self.Fixed_pilot))
 
         selector.summary()
         return selector
@@ -118,7 +121,8 @@ class SparseEstimatorNetwork():
         #encoder.add(Dropout(0.01))
         # encoder.add(Dense(500, input_shape=input_dim, activation='relu'))
         # encoder.add(Dropout(0.05))
-        #encoder.add(Dense(1000, activation='relu'))
+        if self.Enable_conv==0:
+            encoder.add(Dense(1000, activation='relu'))
         encoder.add(Dense(1000, activation='relu'))
         #encoder.add(Dense(encoded_dim))
         encoder.add(Dense(encoded_dim, activation='relu'))
@@ -138,7 +142,8 @@ class SparseEstimatorNetwork():
         #Conv.add(Dropout(0.1))
         decoder.add(Dense(1000, activation='relu', input_dim=encoded_dim+1))
         #decoder.add(Dense(1000, activation='relu', kernel_regularizer= regularizers.l1(0.00000002/1024)))
-        #decoder.add(Dense(1000, activation='relu')) 
+        if self.Enable_conv==0:
+            decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
         decoder.add(Dense(1000, activation='relu')) 
         
@@ -164,12 +169,16 @@ class SparseEstimatorNetwork():
         variance = Input(shape=(1,))
         noisy_image = Lambda(AddNoise)([img, noise])
         selected_img= self.selector(noisy_image)
-        selected_image_2D=Reshape((*img_shape,1))(selected_img)
-        print(img_shape)
-        print(selected_image_2D.get_shape())
-        
-        Conv_image_2D=self.conv_p(selected_image_2D)
-        Conv_image_flatten=Flatten()(Conv_image_2D)
+
+        if self.Enable_conv==0:
+            Conv_image_flatten=selected_img
+        else:
+            selected_image_2D=Reshape((*img_shape,1))(selected_img)
+            print(img_shape)
+            print(selected_image_2D.get_shape())
+            
+            Conv_image_2D=self.conv_p(selected_image_2D)
+            Conv_image_flatten=Flatten()(Conv_image_2D)
 
         input_concated = concatenate([Conv_image_flatten, variance])
      

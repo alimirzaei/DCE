@@ -30,7 +30,7 @@ data_type=0 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 # In[7]:
 #def main(_):
 
-on_cloud=1
+on_cloud=0
 normalize_mode=5 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
@@ -56,7 +56,8 @@ elif data_type==1:
 #regularizer_coef=0.0000002/1024   
 Train_model=1
 Test_model=1
-
+Enable_conv=0
+Fixed_pilot=1
 
 #154 12-12
 regularizer_coef=0.0000000001      
@@ -66,7 +67,7 @@ Number_of_pilot=48
 #155 12-12
 regularizer_coef=0.0000000001      
 encoded_dim=300
-Number_of_pilot=32
+Number_of_pilot=48
 
 
 
@@ -74,8 +75,8 @@ Number_of_pilot=32
 #encoded_dim=40
 epochs=40
 
-SNR_H=3
-SNR_L=15
+SNR_H=12
+SNR_L=12
 
 
 if normalize_mode==4:
@@ -140,7 +141,8 @@ if Train_model==1:
   network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                 on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
-                                Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type)
+                                Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type,
+                                Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot)
 
   if data_type==0:
     network.train(X_train, epochs=epochs)
@@ -153,7 +155,8 @@ if Test_model==1:
   Test_network = SparseEstimatorNetwork(img_shape=X_train[0].shape, encoded_dim=encoded_dim,
                                         Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                         on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
-                                        Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type)
+                                        Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type,
+                                        Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot)
 
   Image_filename=log_path+"/generated.png"
   if data_type==0:
