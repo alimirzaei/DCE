@@ -143,14 +143,19 @@ encoded_dim=300
 Number_of_pilot=48
 log_path='../Share_weights/48_no_conv_12'
 
-Enable_conv=0
+regularizer_coef=0.0000000001      
+encoded_dim=300
+Number_of_pilot=48
+log_path='../Share_weights/48_conv_12'
+
+Enable_conv=1
 Fixed_pilot=1
 
 data_type=0
 normalize_mode=5  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
-SNR_H=3
-SNR_L=15
+SNR_H=12
+SNR_L=12
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
   Noise_var_H=pow(10,(-SNR_L/10))/25

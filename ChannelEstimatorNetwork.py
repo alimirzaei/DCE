@@ -77,11 +77,13 @@ class SparseEstimatorNetwork():
         initializer = 'he_normal'
 
         Conv = Sequential()
-        #Conv.add(Conv2D(64, (32, 12), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
-        #Conv.add(Conv2D(32, (16, 6), activation = 'relu', kernel_initializer = initializer , padding='same'))
-        Conv.add(Conv2D(64, (32, 6), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
-        Conv.add(Conv2D(32, (16, 3), activation = 'relu', kernel_initializer = initializer , padding='same'))
-        Conv.add(Conv2D(8, (8, 2), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        # Conv.add(Conv2D(64, (32, 6), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
+        # Conv.add(Conv2D(32, (16, 3), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        # Conv.add(Conv2D(8, (8, 2), activation = 'relu', kernel_initializer = initializer , padding='same'))
+
+        Conv.add(Conv2D(128, (16, 4), activation = 'relu', input_shape=img_shape ,kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(64, (8, 2), activation = 'relu', kernel_initializer = initializer , padding='same'))
+        Conv.add(Conv2D(32, (4, 2), activation = 'relu', kernel_initializer = initializer , padding='same'))
 
         #Conv.add(MaxPooling2D(pool_size=(4, 2)))
         #Conv.add(Dropout(0.1))
@@ -123,7 +125,7 @@ class SparseEstimatorNetwork():
         # encoder.add(Dropout(0.05))
         if self.Enable_conv==0:
             encoder.add(Dense(1000, activation='relu'))
-        encoder.add(Dense(1000, activation='relu'))
+        #encoder.add(Dense(1000, activation='relu'))
         #encoder.add(Dense(encoded_dim))
         encoder.add(Dense(encoded_dim, activation='relu'))
         #encoder.add(BatchNormalization())
@@ -145,7 +147,7 @@ class SparseEstimatorNetwork():
         if self.Enable_conv==0:
             decoder.add(Dense(1000, activation='relu')) 
         #decoder.add(Dense(1000, activation='relu')) 
-        decoder.add(Dense(1000, activation='relu')) 
+        #decoder.add(Dense(1000, activation='relu')) 
         
         #decoder.add(Dense(np.prod(img_shape), activation='sigmoid'))
         decoder.add(Dense(np.prod(img_shape)))

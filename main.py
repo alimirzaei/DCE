@@ -54,9 +54,9 @@ elif data_type==1:
 
 
 #regularizer_coef=0.0000002/1024   
-Train_model=1
+Train_model=0
 Test_model=1
-Enable_conv=0
+Enable_conv=1
 Fixed_pilot=1
 
 #154 12-12

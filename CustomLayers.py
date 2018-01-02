@@ -97,7 +97,6 @@ class MaskLayer(Layer):
         if dtype is None:
             dtype = K.floatx()
 
-        Fixed=0
         if Fixed==0:
             select_vec=K.variable(initializer(shape),
                                 dtype=dtype,
