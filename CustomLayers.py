@@ -121,7 +121,11 @@ class MaskLayer(Layer):
             #i=6+14*(3+[0 5 11 17 23 29 35 41 47 53 59 65])
             #i=13+14*([0 5 11 17 23 29 35 41 47 53 59 65])
             #idx=[14*i for i in range(0, 72,6)]+[6+14*(3+i) for i in range(0, 72,6)]+[13+14*(i) for i in range(0, 72,6)]
-            idx= [14*i for i in range(0, 72,5)]+[7+14*(i) for i in range(3, 72,4)]+[13+14*(i) for i in range(0, 72,5)]
+            #idx= [2+14*i for i in range(0, 72,5)]+[7+14*(i) for i in range(3, 72,4)]+[11+14*(i) for i in range(0, 72,5)]
+            if self.Number_of_pilot==48:
+                idx= [14*i for i in range(1, 72,6)]+[4+14*(i) for i in range(4, 72,6)]+[7+14*(i) for i in range(1, 72,6)]+[11+14*(i) for i in range(4, 72,6)]
+            elif self.Number_of_pilot==36:
+                idx= [14*i for i in range(1, 72,6)]+[6+14*(i) for i in range(1, 72,6)]+[11+14*(i) for i in range(4, 72,6)]
             #print(idx)
             #print(a.size)
             a[idx]=1;
@@ -135,8 +139,8 @@ class MaskLayer(Layer):
             select_vec=K.variable(value=a,dtype=dtype)
             trainable=False
 
-            if regularizer is not None:
-                self.add_loss(regularizer(select_vec))
+            #if regularizer is not None:
+            #    self.add_loss(regularizer(select_vec))
             
             if trainable:
                 self._trainable_weights.append(select_vec)

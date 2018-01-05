@@ -30,8 +30,7 @@ data_type=0 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 # In[7]:
 #def main(_):
 
-on_cloud=0
-normalize_mode=5 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+on_cloud=1
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
     #data_path = os.path.join("/data/",FLAGS.dataset)
@@ -42,41 +41,41 @@ else:
     #data_path = os.path.join(FLAGS.dataset)
     if data_type==0:
       data_path = os.path.join("/Local_data/chimage_data_3/","")
+      data_path = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Perfect_channel","")
     elif data_type==1:
       data_path = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Perfect_channel/","")
       data_path2 = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Noisy_channels/","")
 
 if data_type==0:
-  Data_file=data_path+"/Ch_real_VehA_14.mat"
+  #Data_file=data_path+"/Ch_real_VehA_14.mat"
+  Data_file=data_path+"/My_perfect_H_12.mat"
 elif data_type==1:
   Data_file1=data_path+"/My_perfect_H_12.mat"
   Data_file2=data_path2+"/My_noisy_H_12.mat"
 
 
 #regularizer_coef=0.0000002/1024   
-Train_model=0
+Train_model=1
 Test_model=1
 Enable_conv=1
 Fixed_pilot=1
+normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
-#154 12-12
-regularizer_coef=0.0000000001      
-encoded_dim=100
-Number_of_pilot=48
+SNR_H=2
+SNR_L=16
 
-#155 12-12
 regularizer_coef=0.0000000001      
-encoded_dim=300
-Number_of_pilot=48
+encoded_dim=250
+
+#Number_of_pilot=48
+
+Number_of_pilot=36
 
 
 
 
 #encoded_dim=40
 epochs=40
-
-SNR_H=12
-SNR_L=12
 
 
 if normalize_mode==4:
@@ -94,14 +93,18 @@ else:
 
 print(Noise_var_H)
 print(Noise_var_L)
-print((np.log10(Noise_var_L)+2)/2)
-print((np.log10(Noise_var_H)+2)/2)
-print(-np.log10(Noise_var_L)*10)
-print(-np.log10(Noise_var_H)*10)
+
+if Noise_var_L==Noise_var_H:
+    print(.1)
+else:
+    print((-np.log10(Noise_var_H)+np.log10(Noise_var_L))/(-np.log10(Noise_var_H)+np.log10(Noise_var_L)))
+
 
 
 if data_type==0:
-  channels = scipy.io.loadmat(Data_file)['channels']
+  #channels = scipy.io.loadmat(Data_file)['channels']
+  channels = scipy.io.loadmat(Data_file)['My_perfect_H']
+
   reals = np.real(channels)
   imags = np.imag(channels)
   all_channel_images = np.vstack([reals, imags])
@@ -116,12 +119,13 @@ if data_type==0:
   X_train , X_test = train_test_split(all_channel_images, test_size=.05, random_state=4000)
 
 elif data_type==1:
-  channels_noisy = scipy.io.loadmat(Data_file1)['My_perfect_H']
+
+  channels_noisy = scipy.io.loadmat(Data_file2)['My_noisy_H']
   reals = np.real(channels_noisy)
   imags = np.imag(channels_noisy)
   all_channel_noisy_images = np.vstack([reals, imags])
   
-  channels_perfect = scipy.io.loadmat(Data_file2)['My_noisy_H']
+  channels_perfect = scipy.io.loadmat(Data_file1)['My_perfect_H']
   reals = np.real(channels_perfect)
   imags = np.imag(channels_perfect)
   all_channel_perfect_images = np.vstack([reals, imags])
@@ -160,13 +164,13 @@ if Test_model==1:
 
   Image_filename=log_path+"/generated.png"
   if data_type==0:
-    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,50,fileName=Image_filename)
+    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,n=50,fileName=Image_filename)
   elif data_type==1:
-    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,Y_test,50,fileName=Image_filename)
+    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,Y_test,n=50,fileName=Image_filename)
 
-  print(np.sqrt(Test_Error))
+  print((Test_Error))
 
-  print(np.mean(np.sqrt(Test_Error)))
+  print(np.mean((Test_Error)))
 
 
 

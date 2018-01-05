@@ -148,11 +148,32 @@ encoded_dim=300
 Number_of_pilot=48
 log_path='../Share_weights/48_conv_12'
 
-Enable_conv=1
+regularizer_coef=0.0000000001      
+encoded_dim=250
+Number_of_pilot=48
+log_path='../Share_weights/48_conv_12_newnorm'
+log_path='../Share_weights/48_conv_12_newnorm_2'
+log_path='../Share_weights/48_conv_3_12_newnorm_newpilot'
+log_path='../Share_weights/48_new_struct'
+log_path='../Share_weights/48_new_struct_type2'
+
+Number_of_pilot=36
+log_path='../Share_weights/36_flex_new_struct'
+Fixed_pilot=0
+
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed'
 Fixed_pilot=1
 
-data_type=0
-normalize_mode=5  # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+
+
+Train_model=0
+Test_model=1
+Enable_conv=1
+normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+
+
+data_type=1
 
 SNR_H=12
 SNR_L=12
@@ -169,8 +190,7 @@ else:
   Noise_var_L=pow(10,(-SNR_H/10))
   Noise_var_H=pow(10,(-SNR_L/10))
 
-print(Noise_var_H)
-print(Noise_var_L)
+
 
 
 
@@ -214,7 +234,7 @@ def estimate_channel():
     elif normalize_mode==4:
     	image= (image)/5
 
-    print(var)
+
 
     y = Test_network.test(image, var)
     
