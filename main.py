@@ -30,7 +30,7 @@ data_type=0 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 # In[7]:
 #def main(_):
 
-on_cloud=1
+on_cloud=0
 if (on_cloud == 1):
     log_path = os.path.join("/output/",FLAGS.logdir)
     #data_path = os.path.join("/data/",FLAGS.dataset)
@@ -61,8 +61,8 @@ Enable_conv=1
 Fixed_pilot=1
 normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
-SNR_H=2
-SNR_L=16
+SNR_H=22
+SNR_L=22
 
 regularizer_coef=0.0000000001      
 encoded_dim=250

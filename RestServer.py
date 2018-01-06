@@ -164,7 +164,31 @@ Fixed_pilot=0
 Number_of_pilot=36
 log_path='../Share_weights/36_fixed'
 Fixed_pilot=1
+SNR_H=12
+SNR_L=12
+data_type=0  #??
 
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed_2_16'
+Fixed_pilot=1
+SNR_H=2
+SNR_L=16
+data_type=0  #??
+
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed_14'
+Fixed_pilot=1
+SNR_H=14
+SNR_L=14
+data_type=0  #??
+
+
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed_22'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=0  #??
 
 
 Train_model=0
@@ -173,10 +197,6 @@ Enable_conv=1
 normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 
-data_type=1
-
-SNR_H=12
-SNR_L=12
 if normalize_mode==4:
   Noise_var_L=pow(10,(-SNR_H/10))/25
   Noise_var_H=pow(10,(-SNR_L/10))/25

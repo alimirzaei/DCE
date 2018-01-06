@@ -279,7 +279,7 @@ class SparseEstimatorNetwork():
 
         if self.data_type==0:
 
-            Num_noise_per_image=5
+            Num_noise_per_image=1
 
 
             x_in= np.tile(x_in, (Num_noise_per_image,1,1))
