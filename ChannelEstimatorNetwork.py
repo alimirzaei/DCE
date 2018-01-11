@@ -41,7 +41,7 @@ class SparseEstimatorNetwork():
 
     def __init__(self, img_shape=(28, 28), encoded_dim=2, Number_of_pilot=30,
                  regularizer_coef=1e-6 ,on_cloud=1, test_mode=0, log_path='.', normalize_mode=2, 
-                 Noise_var_L=.01, Noise_var_H=.1, data_type=0, Enable_conv=0,Fixed_pilot=0):
+                 Noise_var_L=.01, Noise_var_H=.1, data_type=0, Enable_conv=0,Fixed_pilot=0,Enable_auto=1):
         self.encoded_dim = encoded_dim
         self.optimizer = Adam(0.0001)
         self.img_shape = img_shape
@@ -56,6 +56,7 @@ class SparseEstimatorNetwork():
         self.data_type=data_type
         self.Enable_conv=Enable_conv
         self.Fixed_pilot=Fixed_pilot
+        self.Enable_auto=Enable_auto
         if self.normalize_mode==2:
             self.scaler = {}
             self.scaler['min'] = 0
@@ -128,6 +129,15 @@ class SparseEstimatorNetwork():
         Conv.summary()
         return Conv
 
+    def _gensingledenseModel(self, input_dim,img_shape):
+
+        single_dense = Sequential()
+        #single_dense.add(Dense(np.prod(img_shape),input_shape=input_dim))
+        single_dense.add(Reshape(img_shape,input_shape=input_dim))
+        single_dense.summary()
+        return single_dense
+
+
     def _genEncoderModel(self, encoded_dim,input_dim):
         """ Build Encoder Model Based on Paper Configuration
         Args:
@@ -192,10 +202,15 @@ class SparseEstimatorNetwork():
 
         self.selector= self._genSelectorModel (img_shape)
         self.Interpol_m=self._genInterpolModel(img_shape[0]*img_shape[1])
-        self.conv_p= self._genConvModel ((*img_shape,1))
-        self.encoder = self._genEncoderModel(encoded_dim, input_dim=[img_shape[0]*img_shape[1]+1])
-        #self.encoder = self._genEncoderModel(encoded_dim, input_dim=[32*13])
-        self.decoder = self._getDecoderModel(encoded_dim, img_shape)
+        if self.Enable_conv==1:
+            self.conv_p= self._genConvModel ((*img_shape,1))
+        if self.Enable_auto==1:
+            self.encoder = self._genEncoderModel(encoded_dim, input_dim=[img_shape[0]*img_shape[1]+1])
+            #self.encoder = self._genEncoderModel(encoded_dim, input_dim=[32*13])
+            self.decoder = self._getDecoderModel(encoded_dim, img_shape)
+        elif self.Enable_auto==0:
+            self.Denselayer = self._gensingledenseModel(input_dim=[img_shape[0]*img_shape[1]],img_shape=img_shape)
+
 
         img = Input(shape=img_shape)
         noise = Input(shape=img_shape)
@@ -223,25 +238,33 @@ class SparseEstimatorNetwork():
             Conv_image_2D=self.conv_p(selected_image_2D)
             Conv_image_flatten=Flatten()(Conv_image_2D)
 
-        input_concated = concatenate([Conv_image_flatten, variance])
-     
-        #concated = Concatenate([Flatten(input_shape=img_shape)(noisy_image), variance])
-        encoded_repr = self.encoder(input_concated)
+        if self.Enable_auto==1:
+            input_concated = concatenate([Conv_image_flatten, variance])
+         
+            #concated = Concatenate([Flatten(input_shape=img_shape)(noisy_image), variance])
+            encoded_repr = self.encoder(input_concated)
 
-        concated = concatenate([encoded_repr, variance])
-        gen_img = self.decoder(concated)
+            concated = concatenate([encoded_repr, variance])
+            gen_img = self.decoder(concated)
 
-        # if self.normalize_mode==2:
-        #     gen_img_s =gen_img # Lambda(self.my_denormalize)(gen_img)
-        # else:
-        #     gen_img_s=gen_img
-        # self.autoencoder = Model([img, noise, variance], gen_img_s)
+            # if self.normalize_mode==2:
+            #     gen_img_s =gen_img # Lambda(self.my_denormalize)(gen_img)
+            # else:
+            #     gen_img_s=gen_img
+            # self.autoencoder = Model([img, noise, variance], gen_img_s)
 
-        self.autoencoder = Model([img, noise, variance], gen_img)
+            self.autoencoder = Model([img, noise, variance], gen_img)
+        elif self.Enable_auto==0:
+            #input_concated = concatenate([Conv_image_flatten, variance])
+            #input_concated=concatenate([Conv_image_flatten])
+            gen_img = self.Denselayer(Conv_image_flatten)
+
+            self.autoencoder = Model([img, noise, variance], gen_img)
+
 
         #self.autoencoder.compile(optimizer=self.optimizer, loss=my_MSE)
-        self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
-        #self.autoencoder.compile(optimizer=self.optimizer, loss='mae')
+        #self.autoencoder.compile(optimizer=self.optimizer, loss='mse')
+        self.autoencoder.compile(optimizer=self.optimizer, loss='mae')
         if self.test_mode==1:
             if self.on_cloud==0:
                 Weigth_data=self.log_path+"/"+"weights.hdf5"
@@ -363,14 +386,14 @@ class SparseEstimatorNetwork():
                                             #            embeddings_metadata=None)
                                             ])
 
-        elif self.data_type==1:
+        elif self.data_type==1 or  self.data_type==2:
 
             if self.normalize_mode==2:
                 if self.data_type==0:
                     self.scaler['max'] = np.max(x_in)+.2
                     self.scaler['min'] = np.min(x_in)-.2
                     x_scaled=(x_in - (self.scaler['min']-10*self.Noise_var_L)) / (self.scaler['max'] - (self.scaler['min']-10*self.Noise_var_L))
-                elif self.data_type==1:
+                elif self.data_type==1 or self.data_type==2:
                     self.scaler['max'] = np.max(x_in)+.2
                     self.scaler['min'] = np.min(x_in)-.2
                     x_scaled=(x_in - (self.scaler['min'])) / (self.scaler['max'] - (self.scaler['min']))
@@ -460,7 +483,7 @@ class SparseEstimatorNetwork():
             if self.data_type==0:
                 #x_scaled = self.scaler.transform(x_in.reshape(len(x_in),-1))
                 x_scaled=(x_in - (self.scaler['min']-10*self.Noise_var_L)) / (self.scaler['max'] - (self.scaler['min']-10*self.Noise_var_L))
-            elif self.data_type==1:
+            elif self.data_type==1 or self.data_type==2:
                 x_scaled=(x_in - (self.scaler['min'])) / (self.scaler['max'] - (self.scaler['min']))
         else:
             x_scaled = x_in
@@ -471,7 +494,7 @@ class SparseEstimatorNetwork():
             #y_true = self.scaler.inverse_transform(y.reshape(len(y),-1))
             if self.data_type==0:
                 y_true = y*(self.scaler['max'] - (self.scaler['min']-10*self.Noise_var_L)) + (self.scaler['min']-10*self.Noise_var_L)
-            elif self.data_type==1:
+            elif self.data_type==1 or  self.data_type==2:
                 y_true = y*(self.scaler['max'] - (self.scaler['min'])) + (self.scaler['min'])
         else:
             y_true=y
@@ -553,7 +576,7 @@ class SparseEstimatorNetwork():
 
             fig.savefig(fileName)
             return Test_error, Y_all, X_all
-        elif self.data_type==1:
+        elif self.data_type==1 or self.data_type==2:
             Sampled_image_model = K.function([self.selector.layers[0].input],
                                       [self.selector.layers[1].output])
 

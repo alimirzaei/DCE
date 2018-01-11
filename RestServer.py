@@ -157,6 +157,9 @@ log_path='../Share_weights/48_conv_3_12_newnorm_newpilot'
 log_path='../Share_weights/48_new_struct'
 log_path='../Share_weights/48_new_struct_type2'
 
+Enable_auto=1
+
+
 Number_of_pilot=36
 log_path='../Share_weights/36_flex_new_struct'
 Fixed_pilot=0
@@ -181,6 +184,7 @@ Fixed_pilot=1
 SNR_H=14
 SNR_L=14
 data_type=0  #??
+Enable_auto=0
 
 
 Number_of_pilot=36
@@ -190,6 +194,46 @@ SNR_H=22
 SNR_L=22
 data_type=0  #??
 
+Number_of_pilot=48
+log_path='../Share_weights/36_fixed_22'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=0  #??
+
+
+Number_of_pilot=48
+log_path='../Share_weights/48_fixed_22_noAuto'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=0  #??
+Enable_auto=0
+
+
+Number_of_pilot=48
+log_path='../Share_weights/48_fixed_12_noAuto_type1'
+Fixed_pilot=1
+SNR_H=12
+SNR_L=12
+data_type=1  #??
+Enable_auto=0
+
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed_12_noAuto_type1'
+Fixed_pilot=1
+SNR_H=12
+SNR_L=12
+data_type=1  #??
+Enable_auto=0
+
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed_22_noAuto_type2'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=2  #??
+Enable_auto=0
 
 Train_model=0
 Test_model=1
@@ -219,7 +263,7 @@ Test_network = SparseEstimatorNetwork(img_shape=input_shape, encoded_dim=encoded
                                       Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                       on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
                                       Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type, 
-                                      Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot)
+                                      Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto)
 
 
 import scipy.io

@@ -25,7 +25,7 @@ flags.DEFINE_string("logdir", "", "Directory name to save the image samples [out
 flags.DEFINE_string("dataset2", "", "The name of the second dataset [celebA, mnist, lsun]")
 FLAGS = flags.FLAGS
 
-data_type=0 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
+data_type=2 # 0: 40K channel, 1: 40K channel and noisy channel at 12db
 
 # In[7]:
 #def main(_):
@@ -45,6 +45,9 @@ else:
     elif data_type==1:
       data_path = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Perfect_channel/","")
       data_path2 = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_weights/Noisy_channels/","")
+    elif data_type==2:
+      data_path = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_folder/perfect_h21/","")
+      data_path2 = os.path.join("/Dropbox/Working_dir/Tensorflow_home/Share_folder/Noisy_H22/","")
 
 if data_type==0:
   #Data_file=data_path+"/Ch_real_VehA_14.mat"
@@ -52,6 +55,9 @@ if data_type==0:
 elif data_type==1:
   Data_file1=data_path+"/My_perfect_H_12.mat"
   Data_file2=data_path2+"/My_noisy_H_12.mat"
+elif data_type==2:
+  Data_file1=data_path+"/My_perfect_H_22.mat"
+  Data_file2=data_path2+"/My_noisy_H_22.mat"
 
 
 #regularizer_coef=0.0000002/1024   
@@ -59,10 +65,11 @@ Train_model=1
 Test_model=1
 Enable_conv=1
 Fixed_pilot=1
+Enable_auto=0
 normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
-SNR_H=22
-SNR_L=22
+SNR_H=12
+SNR_L=12
 
 regularizer_coef=0.0000000001      
 encoded_dim=250
@@ -118,7 +125,7 @@ if data_type==0:
 
   X_train , X_test = train_test_split(all_channel_images, test_size=.05, random_state=4000)
 
-elif data_type==1:
+elif data_type==1 or data_type==2:
 
   channels_noisy = scipy.io.loadmat(Data_file2)['My_noisy_H']
   reals = np.real(channels_noisy)
@@ -146,11 +153,11 @@ if Train_model==1:
                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                 on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
                                 Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type,
-                                Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot)
+                                Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto)
 
   if data_type==0:
     network.train(X_train, epochs=epochs)
-  elif data_type==1:
+  elif data_type==1 or data_type==2:
     network.train(X_train, Y_train, epochs=epochs)
 
 
@@ -160,12 +167,12 @@ if Test_model==1:
                                         Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                         on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
                                         Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type,
-                                        Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot)
+                                        Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto)
 
   Image_filename=log_path+"/generated.png"
   if data_type==0:
     Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,n=50,fileName=Image_filename)
-  elif data_type==1:
+  elif data_type==1 or data_type==2:
     Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,Y_test,n=50,fileName=Image_filename)
 
   print((Test_Error))
