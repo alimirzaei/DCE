@@ -67,22 +67,23 @@ Enable_conv=1
 Fixed_pilot=1
 Enable_auto=0
 normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
+Drou_out_sel=0
 
-SNR_H=12
-SNR_L=12
+SNR_H=22
+SNR_L=22
 
 regularizer_coef=0.0000000001      
-encoded_dim=250
+encoded_dim=400
 
-#Number_of_pilot=48
+#Number_of_pilot=4
 
-Number_of_pilot=36
+Number_of_pilot=48
 
 
 
 
 #encoded_dim=40
-epochs=40
+epochs=8
 
 
 if normalize_mode==4:
@@ -153,7 +154,7 @@ if Train_model==1:
                                 Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                 on_cloud=on_cloud,test_mode =0 , log_path=log_path, normalize_mode=normalize_mode,
                                 Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type,
-                                Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto)
+                                Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto,Drou_out_sel=Drou_out_sel)
 
   if data_type==0:
     network.train(X_train, epochs=epochs)
@@ -167,18 +168,23 @@ if Test_model==1:
                                         Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                         on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
                                         Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type,
-                                        Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto)
+                                        Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto,Drou_out_sel=Drou_out_sel)
 
   Image_filename=log_path+"/generated.png"
   if data_type==0:
-    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,n=50,fileName=Image_filename)
+    Test_Error,Test_error_int,Y_all,X_all=Test_network.generateAndPlot(X_test,n=50,fileName=Image_filename)
   elif data_type==1 or data_type==2:
-    Test_Error,Y_all,X_all=Test_network.generateAndPlot(X_test,Y_test,n=50,fileName=Image_filename)
+    Test_Error,Test_error_int,Y_all,X_all=Test_network.generateAndPlot(X_test,Y_test,n=50,fileName=Image_filename)
 
   print((Test_Error))
 
   print(np.mean((Test_Error)))
 
+
+  print("------------------")
+  print((Test_error_int))
+
+  print(np.mean((Test_error_int)))
 
 
   fig = plt.figure()

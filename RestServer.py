@@ -234,10 +234,43 @@ SNR_H=22
 SNR_L=22
 data_type=2  #??
 Enable_auto=0
+Drou_out_sel=0
+
+Number_of_pilot=36
+log_path='../Share_weights/36_fixed_22_noAuto_type2_newStruct_mae'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=2  #??
+Enable_auto=0
+Drou_out_sel=0
+
+
+Number_of_pilot=48
+log_path='../Share_weights/48_fixed_22_noAuto_type2_newStruct2_mae'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=2  #??
+Enable_auto=0
+Drou_out_sel=0
+Enable_conv=1
+
+Number_of_pilot=48
+encoded_dim=400
+
+log_path='../Share_weights/48_fixed_22_noAuto_type2_newStruct2_mse'
+Fixed_pilot=1
+SNR_H=22
+SNR_L=22
+data_type=2  #??
+Enable_auto=0
+Drou_out_sel=0
+Enable_conv=1
+
 
 Train_model=0
 Test_model=1
-Enable_conv=1
 normalize_mode=2 # 1: (a+5)/10, #2: MinMaxScaler, 3: noting 
 
 
@@ -263,7 +296,7 @@ Test_network = SparseEstimatorNetwork(img_shape=input_shape, encoded_dim=encoded
                                       Number_of_pilot=Number_of_pilot,regularizer_coef=regularizer_coef,
                                       on_cloud=on_cloud,test_mode =1 , log_path=log_path, normalize_mode=normalize_mode,
                                       Noise_var_L=Noise_var_L, Noise_var_H=Noise_var_H, data_type=data_type, 
-                                      Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto)
+                                      Enable_conv=Enable_conv,Fixed_pilot=Fixed_pilot,Enable_auto=Enable_auto,Drou_out_sel=Drou_out_sel)
 
 
 import scipy.io
@@ -337,7 +370,7 @@ def estimate_channel_vjason():
     image= (image)/5
 
   image=image.reshape(1,image.shape[0],image.shape[1])
-  y = Test_network.test(image, Noise_var)
+  y, y_intrpolated,y_ConvOut = Test_network.test(image, Noise_var)
   if normalize_mode==1:
     y= y*10-5
   elif normalize_mode==5:
